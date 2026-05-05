@@ -1,5 +1,6 @@
 package com.example.houserentalapp
 
+import android.app.ProgressDialog
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -8,20 +9,22 @@ import android.widget.*
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import com.bumptech.glide.Glide
+import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.bumptech.glide.signature.ObjectKey
+import com.cloudinary.android.MediaManager
+import com.cloudinary.android.callback.ErrorInfo
+import com.cloudinary.android.callback.UploadCallback
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.textfield.TextInputEditText
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.*
-import com.google.firebase.storage.FirebaseStorage
-import com.google.firebase.storage.StorageReference
 
 class UserProfileActivity : AppCompatActivity() {
 
     private var isEditMode = false
     private lateinit var auth: FirebaseAuth
     private lateinit var database: DatabaseReference
-    private lateinit var storage: StorageReference
     private lateinit var userId: String
     private var selectedImageUri: Uri? = null
 
@@ -35,10 +38,15 @@ class UserProfileActivity : AppCompatActivity() {
     private lateinit var etAddress: TextInputEditText
     private lateinit var etBio: TextInputEditText
 
+    // Cloudinary Config (Matching Owner Profile)
+    private val CLOUD_NAME = "dy7wl6yak" 
+    private val UPLOAD_PRESET = "glsqrqbz" 
+
     private val pickImage = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
             ivUserProfileImage.setImageURI(it)
             ivUserProfileImage.colorFilter = null
+            ivUserProfileImage.imageTintList = null
             selectedImageUri = it
         }
     }
@@ -47,9 +55,14 @@ class UserProfileActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_user_profile)
 
+        // Initialize Cloudinary safely
+        try {
+            val config = mapOf("cloud_name" to CLOUD_NAME)
+            MediaManager.init(this, config)
+        } catch (e: Exception) { }
+
         auth = FirebaseAuth.getInstance()
         database = FirebaseDatabase.getInstance().getReference("Users")
-        storage = FirebaseStorage.getInstance().getReference("ProfilePictures")
         userId = auth.currentUser?.uid ?: ""
 
         val btnBack = findViewById<ImageButton>(R.id.btnBackUserProfile)
@@ -58,7 +71,7 @@ class UserProfileActivity : AppCompatActivity() {
         ivUserProfileImage = findViewById(R.id.ivUserProfileImage)
         btnEditToggle = findViewById(R.id.btnEditUserToggle)
         btnSaveProfile = findViewById(R.id.btnSaveUserProfile)
-        fabChangePic = findViewById<FloatingActionButton>(R.id.fabChangeUserPic)
+        fabChangePic = findViewById(R.id.fabChangeUserPic)
 
         etName = findViewById(R.id.etUserProfileName)
         etPhone = findViewById(R.id.etUserProfilePhone)
@@ -67,12 +80,9 @@ class UserProfileActivity : AppCompatActivity() {
 
         val fields = listOf(etName, etPhone, etAddress, etBio)
 
-        // Load Profile Data immediately
         loadProfileData()
 
-        btnBack.setOnClickListener {
-            finish()
-        }
+        btnBack.setOnClickListener { finish() }
 
         navHome.setOnClickListener {
             val intent = Intent(this, UserHomeActivity::class.java)
@@ -83,111 +93,105 @@ class UserProfileActivity : AppCompatActivity() {
 
         btnEditToggle.setOnClickListener {
             isEditMode = !isEditMode
-            if (isEditMode) {
-                btnEditToggle.text = getString(R.string.cancel)
-                btnSaveProfile.visibility = View.VISIBLE
-                fabChangePic.visibility = View.VISIBLE
-                enableFields(fields, true)
-            } else {
-                btnEditToggle.text = getString(R.string.edit)
-                btnSaveProfile.visibility = View.GONE
-                fabChangePic.visibility = View.GONE
-                enableFields(fields, false)
-                loadProfileData() // Reload original data on cancel
-            }
+            toggleEditMode(fields)
         }
 
-        fabChangePic.setOnClickListener {
-            pickImage.launch("image/*")
-        }
+        fabChangePic.setOnClickListener { pickImage.launch("image/*") }
+        ivUserProfileImage.setOnClickListener { if (isEditMode) pickImage.launch("image/*") }
 
         btnSaveProfile.setOnClickListener {
             val name = etName.text.toString().trim()
-            val phone = etPhone.text.toString().trim()
-            val address = etAddress.text.toString().trim()
-            val bio = etBio.text.toString().trim()
-
             if (name.isEmpty()) {
                 etName.error = getString(R.string.name_required)
                 return@setOnClickListener
             }
 
             if (selectedImageUri != null) {
-                uploadImageAndSaveData(name, phone, address, bio)
+                uploadToCloudinary(name, etPhone.text.toString(), etAddress.text.toString(), etBio.text.toString())
             } else {
-                saveProfileData(name, phone, address, bio, null)
+                saveProfileData(name, etPhone.text.toString(), etAddress.text.toString(), etBio.text.toString(), null)
             }
         }
     }
 
-    private fun uploadImageAndSaveData(name: String, phone: String, address: String, bio: String) {
-        val fileRef = storage.child("$userId.jpg")
-        fileRef.putFile(selectedImageUri!!)
-            .addOnSuccessListener {
-                fileRef.downloadUrl.addOnSuccessListener { uri ->
-                    saveProfileData(name, phone, address, bio, uri.toString())
+    private fun toggleEditMode(fields: List<TextInputEditText>) {
+        if (isEditMode) {
+            btnEditToggle.text = getString(R.string.cancel)
+            btnSaveProfile.visibility = View.VISIBLE
+            fabChangePic.visibility = View.VISIBLE
+            enableFields(fields, true)
+        } else {
+            btnEditToggle.text = getString(R.string.edit)
+            btnSaveProfile.visibility = View.GONE
+            fabChangePic.visibility = View.GONE
+            enableFields(fields, false)
+            selectedImageUri = null
+            loadProfileData()
+        }
+    }
+
+    private fun uploadToCloudinary(name: String, phone: String, address: String, bio: String) {
+        val progressDialog = ProgressDialog(this).apply {
+            setMessage("Saving Information...")
+            setCancelable(false)
+            show()
+        }
+
+        MediaManager.get().upload(selectedImageUri)
+            .unsigned(UPLOAD_PRESET)
+            .callback(object : UploadCallback {
+                override fun onStart(requestId: String?) {}
+                override fun onProgress(requestId: String?, bytes: Long, totalBytes: Long) {}
+                override fun onSuccess(requestId: String?, resultData: MutableMap<Any?, Any?>?) {
+                    progressDialog.dismiss()
+                    val imageUrl = resultData?.get("secure_url")?.toString()
+                    saveProfileData(name, phone, address, bio, imageUrl)
                 }
-            }
-            .addOnFailureListener { e ->
-                Toast.makeText(this, "Image Upload Failed: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
+                override fun onError(requestId: String?, error: ErrorInfo?) {
+                    progressDialog.dismiss()
+                    Toast.makeText(this@UserProfileActivity, "Upload Failed: " + error?.description, Toast.LENGTH_LONG).show()
+                }
+                override fun onReschedule(requestId: String?, error: ErrorInfo?) {}
+            }).dispatch()
     }
 
     private fun saveProfileData(name: String, phone: String, address: String, bio: String, imageUrl: String?) {
         val userUpdate = mutableMapOf<String, Any>(
-            "name" to name,
-            "phone" to phone,
-            "address" to address,
-            "bio" to bio
+            "name" to name, "phone" to phone, "address" to address, "bio" to bio
         )
+        if (imageUrl != null) userUpdate["profileImageUrl"] = imageUrl
 
-        if (imageUrl != null) {
-            userUpdate["profileImageUrl"] = imageUrl
-        }
-
-        if (userId.isNotEmpty()) {
-            database.child(userId).updateChildren(userUpdate)
-                .addOnSuccessListener {
-                    Toast.makeText(this, getString(R.string.profile_updated_success), Toast.LENGTH_SHORT).show()
-                    isEditMode = false
-                    btnEditToggle.text = getString(R.string.edit)
-                    btnSaveProfile.visibility = View.GONE
-                    fabChangePic.visibility = View.GONE
-                    enableFields(listOf(etName, etPhone, etAddress, etBio), false)
-                }
-                .addOnFailureListener { e ->
-                    Toast.makeText(this, "${getString(R.string.failed_to_update)}: ${e.message}", Toast.LENGTH_SHORT).show()
-                }
+        database.child(userId).updateChildren(userUpdate).addOnSuccessListener {
+            Toast.makeText(this, "Profile Updated!", Toast.LENGTH_SHORT).show()
+            isEditMode = false
+            btnEditToggle.text = getString(R.string.edit)
+            btnSaveProfile.visibility = View.GONE
+            fabChangePic.visibility = View.GONE
+            enableFields(listOf(etName, etPhone, etAddress, etBio), false)
+            loadProfileData()
         }
     }
 
     private fun loadProfileData() {
-        if (userId.isEmpty()) return
-
         database.child(userId).get().addOnSuccessListener { snapshot ->
             if (snapshot.exists()) {
                 etName.setText(snapshot.child("name").value?.toString() ?: "")
                 etPhone.setText(snapshot.child("phone").value?.toString() ?: "")
                 etAddress.setText(snapshot.child("address").value?.toString() ?: "")
                 etBio.setText(snapshot.child("bio").value?.toString() ?: "")
-                
                 val imageUrl = snapshot.child("profileImageUrl").value?.toString()
                 if (!imageUrl.isNullOrEmpty()) {
-                    Glide.with(this)
-                        .load(imageUrl)
-                        .placeholder(R.drawable.ic_person)
-                        .into(ivUserProfileImage)
-                    ivUserProfileImage.colorFilter = null
+                    Glide.with(this).load(imageUrl)
+                        .signature(ObjectKey(System.currentTimeMillis().toString()))
+                        .diskCacheStrategy(DiskCacheStrategy.ALL)
+                        .placeholder(R.drawable.ic_person).circleCrop().into(ivUserProfileImage)
+                    ivUserProfileImage.imageTintList = null
                 }
             }
-        }.addOnFailureListener {
-            Toast.makeText(this, getString(R.string.error_loading_profile), Toast.LENGTH_SHORT).show()
         }
     }
 
     private fun enableFields(fields: List<TextInputEditText>, enabled: Boolean) {
-        for (field in fields) {
-            field.isEnabled = enabled
-        }
+        for (field in fields) field.isEnabled = enabled
     }
 }

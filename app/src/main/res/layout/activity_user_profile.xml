@@ -81,8 +81,7 @@
                 android:layout_height="match_parent"
                 android:contentDescription="@string/profile_pic_desc"
                 android:scaleType="centerCrop"
-                android:src="@drawable/ic_person"
-                app:tint="@color/primary_blue" />
+                android:src="@drawable/ic_person" />
         </androidx.cardview.widget.CardView>
 
         <com.google.android.material.floatingactionbutton.FloatingActionButton

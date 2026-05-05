@@ -21,7 +21,7 @@
     <string name="back_to_sign_in">Back to Sign-in</string>
     <string name="notifications_desc">Notifications</string>
     <string name="discover_header">Discover\nyour new house!</string>
-    <string name="search_places_hint">Search Places</string>
+    <string name="search_places_hint">Search places...</string>
     <string name="filter_desc">Filter</string>
     <string name="house">House</string>
     <string name="office">Office</string>
@@ -49,17 +49,22 @@
     <string name="dont_have_account">Don\'t have any account?</string>
     <string name="sign_up">Sign Up</string>
 
+    <!-- Home Strings -->
+    <string name="welcome_back">Welcome back,</string>
+    <string name="user_name_default">User</string>
+    <string name="search_icon_desc">Search Icon</string>
+
     <!-- Owner Dashboard Strings -->
     <string name="welcome_owner">Welcome Owner</string>
     <string name="welcome_by">Welcome by</string>
     <string name="owner_name_placeholder">Owner Name</string>
     <string name="zero">0</string>
     <string name="zero_revenue">$0</string>
-    <string name="properties_label">Properties</string>
+    <string name="houses_label">Houses</string>
     <string name="requests_label">Requests</string>
     <string name="revenue_label">Revenue</string>
     <string name="quick_actions">Quick Actions</string>
-    <string name="add_property">Add Property</string>
+    <string name="add_house">Add House</string>
     <string name="rent_tracker">Rent Tracker</string>
     <string name="booking_requests">Booking Requests</string>
     <string name="my_listings">My Listings</string>
@@ -88,4 +93,26 @@
     <string name="name_required">Name is required</string>
     <string name="address">Home Address</string>
     <string name="change_profile_pic">Change Profile Picture</string>
+    <string name="owner_details">Owner Details</string>
+    <string name="no_bio_available">No bio available.</string>
+    <string name="not_specified">Not specified</string>
+
+    <!-- Property to House Replacements -->
+    <string name="add_new_house">Add New House</string>
+    <string name="house_photos">House Photos</string>
+    <string name="house_video">House Video</string>
+    <string name="house_details">House Details</string>
+    <string name="house_title_hint">House Title</string>
+    <string name="house_description_hint">House Description</string>
+    <string name="house_location_hint">House Location Address</string>
+    <string name="house_rent_hint">Monthly Rent (৳)</string>
+    <string name="my_house_listings">My House Listings</string>
+    <string name="no_houses_found">No houses found</string>
+    <string name="edit_house">Edit House</string>
+    <string name="update_house">Update House</string>
+    <string name="delete_house">Delete House</string>
+    <string name="house_availability">House Availability</string>
+    <string name="pricing_and_location">Pricing &amp; Location</string>
+    <string name="about_the_house">About the House</string>
+    <string name="select_video_desc">Select Video (Optional)</string>
 </resources>

@@ -14,62 +14,80 @@
 
         <!-- User Activities -->
         <activity
-            android:name=".UserProfileActivity"
+            android:name="com.example.houserentalapp.PropertyDetailsActivity"
             android:exported="false" />
         <activity
-            android:name=".UserForgotPass2Activity"
+            android:name="com.example.houserentalapp.ExploreActivity"
             android:exported="false" />
         <activity
-            android:name=".UserForgotPass1Activity"
+            android:name="com.example.houserentalapp.UserProfileActivity"
             android:exported="false" />
         <activity
-            android:name=".UserHomeActivity"
+            android:name="com.example.houserentalapp.UserForgotPass2Activity"
             android:exported="false" />
         <activity
-            android:name=".UserSignUpActivity"
+            android:name="com.example.houserentalapp.UserForgotPass1Activity"
             android:exported="false" />
         <activity
-            android:name=".UserSignInActivity"
+            android:name="com.example.houserentalapp.UserHomeActivity"
+            android:exported="false" />
+        <activity
+            android:name="com.example.houserentalapp.UserSignUpActivity"
+            android:exported="false" />
+        <activity
+            android:name="com.example.houserentalapp.UserSignInActivity"
             android:exported="false" />
 
         <!-- Owner Activities -->
         <activity
-            android:name=".OwnerProfileActivity"
+            android:name="com.example.houserentalapp.OwnerPublicProfileActivity"
             android:exported="false" />
         <activity
-            android:name=".OwnerForgotPass3Activity"
+            android:name="com.example.houserentalapp.AddPropertyActivity"
             android:exported="false" />
         <activity
-            android:name=".OwnerForgotPass2Activity"
+            android:name="com.example.houserentalapp.MyListingsActivity"
             android:exported="false" />
         <activity
-            android:name=".OwnerForgotPass1Activity"
+            android:name="com.example.houserentalapp.EditPropertyActivity"
             android:exported="false" />
         <activity
-            android:name=".OwnerSignUpActivity"
+            android:name="com.example.houserentalapp.OwnerProfileActivity"
             android:exported="false" />
         <activity
-            android:name=".OwnerHomeActivity"
+            android:name="com.example.houserentalapp.OwnerForgotPass3Activity"
             android:exported="false" />
         <activity
-            android:name=".OwnerSignInActivity"
+            android:name="com.example.houserentalapp.OwnerForgotPass2Activity"
+            android:exported="false" />
+        <activity
+            android:name="com.example.houserentalapp.OwnerForgotPass1Activity"
+            android:exported="false" />
+        <activity
+            android:name="com.example.houserentalapp.OwnerSignUpActivity"
+            android:exported="false" />
+        <activity
+            android:name="com.example.houserentalapp.OwnerHomeActivity"
+            android:exported="false" />
+        <activity
+            android:name="com.example.houserentalapp.OwnerSignInActivity"
             android:exported="false" />
 
         <!-- Admin & Core Activities -->
         <activity
-            android:name=".AdminHomeActivity"
+            android:name="com.example.houserentalapp.AdminHomeActivity"
             android:exported="false" />
         <activity
-            android:name=".AdminLoginActivity"
+            android:name="com.example.houserentalapp.AdminLoginActivity"
             android:exported="false" />
         <activity
-            android:name=".Home3Activity"
+            android:name="com.example.houserentalapp.Home3Activity"
             android:exported="false" />
         <activity
-            android:name=".Home2Activity"
+            android:name="com.example.houserentalapp.Home2Activity"
             android:exported="false" />
         <activity
-            android:name=".MainActivity"
+            android:name="com.example.houserentalapp.MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

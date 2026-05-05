@@ -102,7 +102,7 @@ class OwnerSignInActivity : AppCompatActivity() {
 
         val googleSignInClient = GoogleSignIn.getClient(this, gso)
         
-        // Force account picker by signing out before starting the intent
+        // IMPORTANT: Sign out first to force the Account Picker to show up every time
         googleSignInClient.signOut().addOnCompleteListener {
             val signInIntent = googleSignInClient.signInIntent
             googleSignInLauncher.launch(signInIntent)

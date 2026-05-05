@@ -27,6 +27,14 @@ android {
             )
         }
     }
+    
+    packaging {
+        jniLibs {
+            // Changed to false to support 16KB page alignment for Android 15+
+            useLegacyPackaging = false
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -59,4 +67,7 @@ dependencies {
     // Glide for image loading
     implementation(libs.glide)
     annotationProcessor(libs.glide.compiler)
+
+    // Updated Cloudinary to 3.1.2 for better compatibility
+    implementation("com.cloudinary:cloudinary-android:3.1.2")
 }

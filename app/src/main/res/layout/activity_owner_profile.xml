@@ -81,8 +81,7 @@
                 android:layout_height="match_parent"
                 android:contentDescription="@string/profile_pic_desc"
                 android:scaleType="centerCrop"
-                android:src="@drawable/ic_person"
-                app:tint="@color/primary_blue" />
+                android:src="@drawable/ic_person" />
         </androidx.cardview.widget.CardView>
 
         <com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -135,6 +134,26 @@
                     android:enabled="false"
                     android:inputType="textPersonName"
                     android:textColor="#333333" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Email (Read Only) -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilProfileEmail"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:hint="@string/email_hint"
+                app:endIconDrawable="@drawable/ic_notifications"
+                app:endIconTint="#A0A0A0">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etProfileEmail"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:enabled="false"
+                    android:inputType="textEmailAddress"
+                    android:textColor="#757575" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <!-- Phone Number -->
