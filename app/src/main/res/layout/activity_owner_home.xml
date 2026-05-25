@@ -381,36 +381,6 @@
                 </androidx.cardview.widget.CardView>
             </GridLayout>
 
-            <!-- Recent Notifications Label -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:layout_marginTop="16dp"
-                android:text="@string/pending_approvals"
-                android:textColor="#333333"
-                android:textSize="18sp"
-                android:textStyle="bold" />
-
-            <!-- Empty State -->
-            <TextView
-                android:id="@+id/tvNoRequests"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:gravity="center"
-                android:padding="24dp"
-                android:text="@string/no_pending_requests"
-                android:textColor="#9E9E9E"
-                android:textSize="14sp" />
-
-            <!-- Dynamic container for actual requests -->
-            <LinearLayout
-                android:id="@+id/requestContainer"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical" />
-
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 

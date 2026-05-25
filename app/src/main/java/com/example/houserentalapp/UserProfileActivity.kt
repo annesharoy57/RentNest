@@ -67,6 +67,7 @@ class UserProfileActivity : AppCompatActivity() {
 
         val btnBack = findViewById<ImageButton>(R.id.btnBackUserProfile)
         val navHome = findViewById<LinearLayout>(R.id.nav_user_profile_to_home)
+        val navExplore = findViewById<LinearLayout>(R.id.nav_user_profile_explore)
         
         ivUserProfileImage = findViewById(R.id.ivUserProfileImage)
         btnEditToggle = findViewById(R.id.btnEditUserToggle)
@@ -89,6 +90,11 @@ class UserProfileActivity : AppCompatActivity() {
             intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
             startActivity(intent)
             finish()
+        }
+
+        navExplore.setOnClickListener {
+            val intent = Intent(this, ExploreActivity::class.java)
+            startActivity(intent)
         }
 
         btnEditToggle.setOnClickListener {
