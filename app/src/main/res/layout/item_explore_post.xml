@@ -63,11 +63,13 @@
             </LinearLayout>
 
             <ImageButton
+                android:id="@+id/btnMore"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:background="@android:color/transparent"
                 android:src="@drawable/ic_more_vert"
-                app:tint="#65676B" />
+                app:tint="#65676B"
+                android:contentDescription="More options" />
         </LinearLayout>
 
         <!-- Description -->

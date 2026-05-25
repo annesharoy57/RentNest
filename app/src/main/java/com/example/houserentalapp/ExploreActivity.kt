@@ -1,17 +1,18 @@
 package com.example.houserentalapp
 
+import android.app.Dialog
 import android.content.Intent
 import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.text.format.DateUtils
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
-import android.widget.TextView
-import android.widget.Toast
+import android.view.Window
+import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
+import androidx.appcompat.widget.PopupMenu
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
@@ -125,6 +126,7 @@ class ExploreAdapter(
         val layoutOwnerInfo: View = view.findViewById(R.id.layoutOwnerInfo)
         val btnLike: TextView = view.findViewById(R.id.btnLike)
         val btnShare: TextView = view.findViewById(R.id.btnShare)
+        val btnMore: ImageButton = view.findViewById(R.id.btnMore)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ExploreViewHolder {
@@ -202,7 +204,6 @@ class ExploreAdapter(
                 favRef.removeValue()
             } else {
                 favRef.setValue(true)
-                // SEND NOTIFICATION TO OWNER
                 sendNotificationToOwner(currentUserId, property)
             }
         }
@@ -213,37 +214,90 @@ class ExploreAdapter(
             intent.putExtra("OWNER_ID", property.ownerId)
             context.startActivity(intent)
         }
+
+        holder.btnMore.setOnClickListener {
+            val popup = PopupMenu(context, holder.btnMore)
+            popup.menuInflater.inflate(R.menu.post_options_menu, popup.menu)
+            popup.setOnMenuItemClickListener { menuItem ->
+                when (menuItem.itemId) {
+                    R.id.action_save -> { saveProperty(context, property); true }
+                    R.id.action_review -> { showReviewDialog(context, property); true }
+                    R.id.action_report -> { Toast.makeText(context, "Property Reported", Toast.LENGTH_SHORT).show(); true }
+                    else -> false
+                }
+            }
+            popup.show()
+        }
+    }
+
+    private fun saveProperty(context: android.content.Context, property: Property) {
+        if (currentUserId == null) return
+        val pId = property.propertyId ?: return
+        val saveRef = FirebaseDatabase.getInstance().getReference("SavedProperties").child(currentUserId).child(pId)
+        saveRef.setValue(property).addOnSuccessListener {
+            Toast.makeText(context, "House saved!", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun showReviewDialog(context: android.content.Context, property: Property) {
+        if (currentUserId == null) return
+        val dialog = Dialog(context)
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dialog.setContentView(R.layout.dialog_review)
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+
+        val ratingBar = dialog.findViewById<RatingBar>(R.id.ratingBar)
+        val etReview = dialog.findViewById<EditText>(R.id.etReview)
+        val tvRatingLabel = dialog.findViewById<TextView>(R.id.tvRatingLabel)
+        val btnPost = dialog.findViewById<Button>(R.id.btnPostReview)
+        val btnCancel = dialog.findViewById<Button>(R.id.btnCancelReview)
+
+        ratingBar.setOnRatingBarChangeListener { _, rating, _ ->
+            tvRatingLabel.text = "Rating (${rating.toInt()}/5)"
+        }
+
+        btnCancel.setOnClickListener { dialog.dismiss() }
+
+        btnPost.setOnClickListener {
+            val rating = ratingBar.rating
+            if (rating == 0f) {
+                Toast.makeText(context, "Please select stars", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            val reviewId = FirebaseDatabase.getInstance().getReference("Reviews").push().key ?: return@setOnClickListener
+            val reviewData = hashMapOf(
+                "reviewId" to reviewId,
+                "propertyId" to property.propertyId,
+                "propertyTitle" to property.title,
+                "propertyImage" to (property.imageUrls?.firstOrNull() ?: ""),
+                "propertyLocation" to (property.location ?: ""),
+                "userId" to currentUserId,
+                "rating" to rating,
+                "review" to etReview.text.toString().trim(),
+                "timestamp" to ServerValue.TIMESTAMP
+            )
+
+            val rootRef = FirebaseDatabase.getInstance().reference
+            val updates = hashMapOf<String, Any>()
+            updates["/Reviews/${property.propertyId}/$reviewId"] = reviewData
+            updates["/UserReviews/$currentUserId/$reviewId"] = reviewData
+
+            rootRef.updateChildren(updates).addOnSuccessListener {
+                Toast.makeText(context, "Review posted!", Toast.LENGTH_SHORT).show()
+                dialog.dismiss()
+            }
+        }
+        dialog.show()
     }
 
     private fun sendNotificationToOwner(userId: String, property: Property) {
         val ownerId = property.ownerId ?: return
-        if (userId == ownerId) return // Don't notify self
-
-        val userRef = FirebaseDatabase.getInstance().getReference("Users").child(userId)
-        userRef.addListenerForSingleValueEvent(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                if (snapshot.exists()) {
-                    val name = snapshot.child("name").value?.toString() ?: "Someone"
-                    val profilePic = snapshot.child("profileImageUrl").value?.toString() ?: ""
-                    
-                    val notifyRef = FirebaseDatabase.getInstance().getReference("Notifications").child(ownerId)
-                    val notifyId = notifyRef.push().key ?: return
-                    
-                    val notification = Notification(
-                        id = notifyId,
-                        fromUserId = userId,
-                        fromUserName = name,
-                        fromUserProfilePic = profilePic,
-                        propertyId = property.propertyId,
-                        propertyTitle = property.title,
-                        type = "LIKE"
-                    )
-                    
-                    notifyRef.child(notifyId).setValue(notification)
-                }
-            }
-            override fun onCancelled(error: DatabaseError) {}
-        })
+        if (userId == ownerId) return
+        val notifyRef = FirebaseDatabase.getInstance().getReference("Notifications").child(ownerId).push()
+        val notification = Notification(id = notifyRef.key, fromUserId = userId, propertyId = property.propertyId, type = "LIKE")
+        notifyRef.setValue(notification)
     }
 
     override fun getItemCount(): Int = propertyList.size

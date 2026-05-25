@@ -7,7 +7,6 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
-import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.cardview.widget.CardView
 import com.bumptech.glide.Glide
@@ -40,6 +39,7 @@ class UserHomeActivity : AppCompatActivity() {
         val navFavorite = findViewById<LinearLayout>(R.id.nav_favorite)
         val navProfile = findViewById<LinearLayout>(R.id.nav_profile)
 
+        val catHouse = findViewById<CardView>(R.id.catHouse)
         val cvMap = findViewById<CardView>(R.id.cvMap)
         val cvBookings = findViewById<CardView>(R.id.cvUserBookings)
         val cvPayments = findViewById<CardView>(R.id.cvUserPayments)
@@ -55,13 +55,6 @@ class UserHomeActivity : AppCompatActivity() {
         btnLogout.setOnClickListener {
             logoutUser()
         }
-
-        // Handle System Back Button
-        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                logoutUser()
-            }
-        })
 
         // Navigation listeners
         navHome.setOnClickListener {
@@ -80,20 +73,25 @@ class UserHomeActivity : AppCompatActivity() {
             startActivity(Intent(this, UserProfileActivity::class.java))
         }
 
-        // Feature listeners
+        // Category Listeners
+        catHouse.setOnClickListener {
+            startActivity(Intent(this, SavedHousesActivity::class.java))
+        }
+
+        // Quick Services listeners
         cvMap.setOnClickListener {
             val intent = Intent(this, MapActivity::class.java)
             intent.putExtra("PICK_MODE", false)
             startActivity(intent)
         }
         cvBookings.setOnClickListener {
-            Toast.makeText(this, "Bookings feature coming soon", Toast.LENGTH_SHORT).show()
+            startActivity(Intent(this, UserBookingsActivity::class.java))
         }
         cvPayments.setOnClickListener {
             Toast.makeText(this, "Payments feature coming soon", Toast.LENGTH_SHORT).show()
         }
         cvReviews.setOnClickListener {
-            Toast.makeText(this, "Reviews feature coming soon", Toast.LENGTH_SHORT).show()
+            startActivity(Intent(this, MyReviewsActivity::class.java))
         }
     }
 

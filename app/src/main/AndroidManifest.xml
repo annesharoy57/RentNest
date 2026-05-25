@@ -32,6 +32,19 @@
 
         <!-- User Activities -->
         <activity
+            android:name="com.example.houserentalapp.SavedHousesActivity"
+            android:exported="false"
+            android:label="Saved Houses" />
+        <activity
+            android:name="com.example.houserentalapp.UserBookingsActivity"
+            android:exported="false"
+            android:label="My Bookings" />
+        <activity
+            android:name="com.example.houserentalapp.MyReviewsActivity"
+            android:exported="false"
+            android:label="My Reviews" />
+
+        <activity
             android:name="com.example.houserentalapp.FavoriteActivity"
             android:exported="false"
             android:label="My Favorites" />

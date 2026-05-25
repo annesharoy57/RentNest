@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
@@ -13,6 +14,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.*
 
 class PropertyDetailsActivity : AppCompatActivity() {
@@ -31,12 +33,15 @@ class PropertyDetailsActivity : AppCompatActivity() {
     private lateinit var btnPlayVideo: View
     private lateinit var btnCallOwner: View
     private lateinit var tvViewProfile: TextView
+    private lateinit var btnBookNow: Button
     
     private lateinit var database: DatabaseReference
     private var propertyId: String? = null
     private var ownerPhoneNumber: String? = null
     private var latitude: Double? = null
     private var longitude: Double? = null
+    private var currentProperty: Property? = null
+    private val auth = FirebaseAuth.getInstance()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -85,8 +90,8 @@ class PropertyDetailsActivity : AppCompatActivity() {
             }
         }
 
-        findViewById<View>(R.id.btnBookNow).setOnClickListener {
-            Toast.makeText(this, "Booking request sent to owner!", Toast.LENGTH_SHORT).show()
+        btnBookNow.setOnClickListener {
+            bookProperty()
         }
     }
 
@@ -105,6 +110,7 @@ class PropertyDetailsActivity : AppCompatActivity() {
         btnPlayVideo = findViewById(R.id.btnPlayVideo)
         btnCallOwner = findViewById(R.id.btnCallOwner)
         tvViewProfile = findViewById(R.id.tvViewProfile)
+        btnBookNow = findViewById(R.id.btnBookNow)
 
         rvPhotos.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
     }
@@ -113,32 +119,34 @@ class PropertyDetailsActivity : AppCompatActivity() {
         database.addListenerForSingleValueEvent(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 val property = snapshot.getValue(Property::class.java)
-                property?.let {
-                    tvTitle.text = it.title
-                    tvLocation.text = it.location
-                    tvDescription.text = it.description
-                    tvPrice.text = "৳ ${it.rentAmount} / mo"
+                if (property != null) {
+                    if (property.propertyId == null) property.propertyId = snapshot.key
+                    currentProperty = property
                     
-                    this@PropertyDetailsActivity.latitude = it.latitude
-                    this@PropertyDetailsActivity.longitude = it.longitude
+                    tvTitle.text = property.title
+                    tvLocation.text = property.location
+                    tvDescription.text = property.description
+                    tvPrice.text = "৳ ${property.rentAmount} / mo"
+                    
+                    this@PropertyDetailsActivity.latitude = property.latitude
+                    this@PropertyDetailsActivity.longitude = property.longitude
 
-                    if (!it.imageUrls.isNullOrEmpty()) {
-                        Glide.with(this@PropertyDetailsActivity).load(it.imageUrls!![0]).into(ivHeader)
-                        rvPhotos.adapter = PhotosAdapter(it.imageUrls!!)
+                    if (!property.imageUrls.isNullOrEmpty()) {
+                        Glide.with(this@PropertyDetailsActivity).load(property.imageUrls!![0]).into(ivHeader)
+                        rvPhotos.adapter = PhotosAdapter(property.imageUrls!!)
                     }
 
-                    if (!it.videoUrl.isNullOrEmpty()) {
+                    if (!property.videoUrl.isNullOrEmpty()) {
                         layoutVideoSection.visibility = View.VISIBLE
                         btnPlayVideo.setOnClickListener { _ ->
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(it.videoUrl))
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(property.videoUrl))
                             startActivity(intent)
                         }
                     } else {
                         layoutVideoSection.visibility = View.GONE
                     }
 
-                    // Crucial: Load the actual name from the Users node
-                    loadOwnerInfo(it.ownerId)
+                    loadOwnerInfo(property.ownerId)
                 }
             }
             override fun onCancelled(error: DatabaseError) {}
@@ -180,6 +188,71 @@ class PropertyDetailsActivity : AppCompatActivity() {
                 }
                 override fun onCancelled(error: DatabaseError) {}
             })
+    }
+
+    private fun bookProperty() {
+        val userId = auth.currentUser?.uid
+        val property = currentProperty
+        if (userId == null) {
+            Toast.makeText(this, "Please sign in to book", Toast.LENGTH_SHORT).show()
+            return
+        }
+        if (property == null) return
+
+        val pId = property.propertyId ?: return
+        val bookingRef = FirebaseDatabase.getInstance().getReference("Bookings").child(userId).child(pId)
+        
+        val bookingData = hashMapOf(
+            "propertyId" to pId,
+            "propertyTitle" to property.title,
+            "propertyPrice" to property.rentAmount,
+            "propertyLocation" to property.location,
+            "propertyImage" to (property.imageUrls?.firstOrNull() ?: ""),
+            "ownerId" to property.ownerId,
+            "status" to "PENDING",
+            "timestamp" to ServerValue.TIMESTAMP
+        )
+
+        bookingRef.setValue(bookingData).addOnSuccessListener {
+            Toast.makeText(this, "Booking Successful!", Toast.LENGTH_SHORT).show()
+            sendBookingNotificationToOwner(userId, property)
+            
+            // AUTOMATICALLY OPEN BOOKINGS LIST
+            val intent = Intent(this, UserBookingsActivity::class.java)
+            startActivity(intent)
+            finish() // Optional: close details page
+
+        }.addOnFailureListener {
+            Toast.makeText(this, "Error: ${it.message}", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun sendBookingNotificationToOwner(userId: String, property: Property) {
+        val ownerId = property.ownerId ?: return
+        val userRef = FirebaseDatabase.getInstance().getReference("Users").child(userId)
+        userRef.addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                if (snapshot.exists()) {
+                    val name = snapshot.child("name").value?.toString() ?: "Someone"
+                    val profilePic = snapshot.child("profileImageUrl").value?.toString() ?: ""
+                    
+                    val notifyRef = FirebaseDatabase.getInstance().getReference("Notifications").child(ownerId)
+                    val notifyId = notifyRef.push().key ?: return
+                    
+                    val notification = Notification(
+                        id = notifyId,
+                        fromUserId = userId,
+                        fromUserName = name,
+                        fromUserProfilePic = profilePic,
+                        propertyId = property.propertyId,
+                        propertyTitle = property.title,
+                        type = "BOOKING_REQUEST"
+                    )
+                    notifyRef.child(notifyId).setValue(notification)
+                }
+            }
+            override fun onCancelled(error: DatabaseError) {}
+        })
     }
 }
 

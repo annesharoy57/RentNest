@@ -7,7 +7,7 @@
     android:background="#F8F9FB"
     tools:context=".UserHomeActivity">
 
-    <!-- Premium Header Background -->
+    <!-- Header Background -->
     <View
         android:id="@+id/headerBackground"
         android:layout_width="match_parent"
@@ -45,7 +45,7 @@
         app:layout_constraintTop_toTopOf="@id/btnBackUserHome"
         app:tint="@color/white" />
 
-    <!-- Profile Header Section -->
+    <!-- Profile Header -->
     <LinearLayout
         android:id="@+id/profileHeaderSection"
         android:layout_width="0dp"
@@ -95,7 +95,6 @@
         </LinearLayout>
     </LinearLayout>
 
-    <!-- Main Content -->
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -110,7 +109,7 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <!-- Professional Search Bar Row -->
+            <!-- Search Bar -->
             <LinearLayout
                 android:id="@+id/searchRow"
                 android:layout_width="match_parent"
@@ -168,7 +167,7 @@
                 </androidx.cardview.widget.CardView>
             </LinearLayout>
 
-            <!-- Categories Section -->
+            <!-- Categories -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -192,9 +191,15 @@
                     android:layout_height="wrap_content"
                     android:orientation="horizontal">
 
+                    <!-- House Category (Linked to Saved Houses) -->
                     <androidx.cardview.widget.CardView
+                        android:id="@+id/catHouse"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_marginEnd="12dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="?attr/selectableItemBackground"
                         app:cardBackgroundColor="@color/card_blue"
                         app:cardCornerRadius="14dp"
                         app:cardElevation="3dp">
@@ -212,7 +217,7 @@
                 </LinearLayout>
             </HorizontalScrollView>
 
-            <!-- Quick Services Section -->
+            <!-- Quick Services Grid -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -230,7 +235,6 @@
                 android:columnCount="2"
                 android:padding="16dp">
 
-                <!-- Service Cards Reverted to explicit LinearLayout for perfect icon sizing -->
                 <androidx.cardview.widget.CardView
                     android:id="@+id/cvMap"
                     android:layout_width="0dp"
@@ -366,12 +370,11 @@
                             android:textStyle="bold" />
                     </LinearLayout>
                 </androidx.cardview.widget.CardView>
-
             </GridLayout>
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
-    <!-- Professional Bottom Navigation Bar -->
+    <!-- Bottom Navigation Bar -->
     <androidx.cardview.widget.CardView
         android:id="@+id/userBottomNav"
         android:layout_width="0dp"
@@ -381,18 +384,14 @@
         app:cardElevation="15dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintWidth_max="500dp">
+        app:layout_constraintStart_toStartOf="parent">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:background="@color/white"
-            android:baselineAligned="false"
             android:gravity="center"
             android:orientation="horizontal">
 
-            <!-- Home -->
             <LinearLayout
                 android:id="@+id/nav_home"
                 android:layout_width="0dp"
@@ -412,14 +411,12 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
                     android:text="@string/home"
                     android:textColor="@color/primary_blue"
                     android:textSize="12sp"
                     android:textStyle="bold" />
             </LinearLayout>
 
-            <!-- Explore -->
             <LinearLayout
                 android:id="@+id/nav_explore"
                 android:layout_width="0dp"
@@ -439,13 +436,11 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
                     android:text="@string/explore"
                     android:textColor="#A0A0A0"
                     android:textSize="12sp" />
             </LinearLayout>
 
-            <!-- Favorite -->
             <LinearLayout
                 android:id="@+id/nav_favorite"
                 android:layout_width="0dp"
@@ -465,13 +460,11 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
                     android:text="@string/favorite"
                     android:textColor="#A0A0A0"
                     android:textSize="12sp" />
             </LinearLayout>
 
-            <!-- Profile -->
             <LinearLayout
                 android:id="@+id/nav_profile"
                 android:layout_width="0dp"
@@ -491,12 +484,10 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
                     android:text="@string/profile"
                     android:textColor="#A0A0A0"
                     android:textSize="12sp" />
             </LinearLayout>
-
         </LinearLayout>
     </androidx.cardview.widget.CardView>
 
