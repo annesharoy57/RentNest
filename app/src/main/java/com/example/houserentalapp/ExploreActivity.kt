@@ -1,0 +1,250 @@
+package com.example.houserentalapp
+
+import android.content.Intent
+import android.graphics.Color
+import android.os.Bundle
+import android.text.format.DateUtils
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.ImageView
+import android.widget.TextView
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.*
+
+class ExploreActivity : AppCompatActivity() {
+
+    private lateinit var rvExplore: RecyclerView
+    private lateinit var adapter: ExploreAdapter
+    private lateinit var database: DatabaseReference
+    private val propertyList = mutableListOf<Property>()
+    private val auth = FirebaseAuth.getInstance()
+    private val favoritesSet = mutableSetOf<String>()
+
+    private var favRef: DatabaseReference? = null
+    private var favListener: ValueEventListener? = null
+    private var propertiesListener: ValueEventListener? = null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_explore)
+
+        rvExplore = findViewById(R.id.rvExplore)
+        rvExplore.layoutManager = LinearLayoutManager(this)
+        
+        adapter = ExploreAdapter(propertyList, auth.currentUser?.uid, favoritesSet) { property ->
+            val intent = Intent(this, PropertyDetailsActivity::class.java)
+            intent.putExtra("PROPERTY_ID", property.propertyId)
+            startActivity(intent)
+        }
+        rvExplore.adapter = adapter
+
+        database = FirebaseDatabase.getInstance().getReference("Properties")
+        
+        setupListeners()
+
+        findViewById<View>(R.id.btnBackExplore).setOnClickListener { finish() }
+    }
+
+    private fun setupListeners() {
+        val userId = auth.currentUser?.uid
+        val pb = findViewById<View>(R.id.pbExplore)
+        pb.visibility = View.VISIBLE
+
+        if (userId != null) {
+            favRef = FirebaseDatabase.getInstance().getReference("Favorites").child(userId)
+            favListener = object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    favoritesSet.clear()
+                    for (data in snapshot.children) {
+                        data.key?.let { favoritesSet.add(it) }
+                    }
+                    adapter.notifyDataSetChanged()
+                }
+                override fun onCancelled(error: DatabaseError) {}
+            }
+            favRef?.addValueEventListener(favListener!!)
+        }
+
+        propertiesListener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                propertyList.clear()
+                for (data in snapshot.children) {
+                    val property = data.getValue(Property::class.java)
+                    if (property != null) {
+                        if (property.propertyId == null) property.propertyId = data.key
+                        propertyList.add(property)
+                    }
+                }
+                propertyList.sortByDescending { it.createdAt }
+                adapter.notifyDataSetChanged()
+                pb.visibility = View.GONE
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                pb.visibility = View.GONE
+                if (auth.currentUser != null) {
+                    Toast.makeText(this@ExploreActivity, "Error: ${error.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+        database.addValueEventListener(propertiesListener!!)
+    }
+
+    override fun onDestroy() {
+        favListener?.let { favRef?.removeEventListener(it) }
+        propertiesListener?.let { database.removeEventListener(it) }
+        super.onDestroy()
+    }
+}
+
+class ExploreAdapter(
+    private val propertyList: List<Property>,
+    private val currentUserId: String?,
+    private val favoritesSet: Set<String>,
+    private val onDetailsClick: (Property) -> Unit
+) : RecyclerView.Adapter<ExploreAdapter.ExploreViewHolder>() {
+
+    class ExploreViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        val ivOwnerAvatar: ImageView = view.findViewById(R.id.ivOwnerAvatar)
+        val tvOwnerName: TextView = view.findViewById(R.id.tvOwnerName)
+        val tvPostTime: TextView = view.findViewById(R.id.tvPostTime)
+        val tvPostTitle: TextView = view.findViewById(R.id.tvPostTitle)
+        val tvPostDescription: TextView = view.findViewById(R.id.tvPostDescription)
+        val ivPostImage: ImageView = view.findViewById(R.id.ivPostImage)
+        val ivVideoIndicator: ImageView = view.findViewById(R.id.ivVideoIndicator)
+        val tvPostLocation: TextView = view.findViewById(R.id.tvPostLocation)
+        val tvPostPrice: TextView = view.findViewById(R.id.tvPostPrice)
+        val btnViewDetails: TextView = view.findViewById(R.id.btnViewDetails)
+        val layoutOwnerInfo: View = view.findViewById(R.id.layoutOwnerInfo)
+        val btnLike: TextView = view.findViewById(R.id.btnLike)
+        val btnShare: TextView = view.findViewById(R.id.btnShare)
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ExploreViewHolder {
+        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_explore_post, parent, false)
+        return ExploreViewHolder(view)
+    }
+
+    override fun onBindViewHolder(holder: ExploreViewHolder, position: Int) {
+        val property = propertyList[position]
+        val context = holder.itemView.context
+        
+        holder.tvPostTitle.text = property.title ?: "No Title"
+        holder.tvPostDescription.text = property.description ?: ""
+        holder.tvPostLocation.text = property.location ?: "Unknown"
+        holder.tvPostPrice.text = "৳ ${property.rentAmount ?: "0"}"
+        
+        val timeAgo = DateUtils.getRelativeTimeSpanString(
+            property.createdAt,
+            System.currentTimeMillis(),
+            DateUtils.MINUTE_IN_MILLIS
+        )
+        holder.tvPostTime.text = timeAgo
+
+        holder.ivVideoIndicator.visibility = if (!property.videoUrl.isNullOrEmpty()) View.VISIBLE else View.GONE
+
+        if (!property.imageUrls.isNullOrEmpty()) {
+            Glide.with(context).load(property.imageUrls!![0]).placeholder(R.drawable.ic_home).into(holder.ivPostImage)
+        } else {
+            holder.ivPostImage.setImageResource(R.drawable.ic_home)
+        }
+
+        holder.tvOwnerName.text = "Loading..."
+        holder.ivOwnerAvatar.setImageResource(R.drawable.ic_person)
+
+        if (!property.ownerId.isNullOrEmpty()) {
+            FirebaseDatabase.getInstance().getReference("Users").child(property.ownerId!!)
+                .addListenerForSingleValueEvent(object : ValueEventListener {
+                    override fun onDataChange(snapshot: DataSnapshot) {
+                        if (snapshot.exists()) {
+                            val name = snapshot.child("name").value?.toString() ?: "User"
+                            val profileUrl = snapshot.child("profileImageUrl").value?.toString()
+                            holder.tvOwnerName.text = name
+                            if (!profileUrl.isNullOrEmpty()) {
+                                Glide.with(context).load(profileUrl).circleCrop().placeholder(R.drawable.ic_person).into(holder.ivOwnerAvatar)
+                            }
+                        } else {
+                            holder.tvOwnerName.text = "Unknown Owner"
+                        }
+                    }
+                    override fun onCancelled(error: DatabaseError) {}
+                })
+        }
+
+        val isLiked = favoritesSet.contains(property.propertyId)
+        if (isLiked) {
+            holder.btnLike.setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_favorite, 0, 0, 0)
+            holder.btnLike.setTextColor(Color.RED)
+            holder.btnLike.text = "Liked"
+        } else {
+            holder.btnLike.setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_favorite_border, 0, 0, 0)
+            holder.btnLike.setTextColor(Color.parseColor("#65676B"))
+            holder.btnLike.text = "Like"
+        }
+
+        holder.btnLike.setOnClickListener {
+            if (currentUserId == null) {
+                Toast.makeText(context, "Please sign in to like", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            val pId = property.propertyId ?: return@setOnClickListener
+
+            val favRef = FirebaseDatabase.getInstance().getReference("Favorites").child(currentUserId).child(pId)
+            
+            if (isLiked) {
+                favRef.removeValue()
+            } else {
+                favRef.setValue(true)
+                // SEND NOTIFICATION TO OWNER
+                sendNotificationToOwner(currentUserId, property)
+            }
+        }
+
+        holder.btnViewDetails.setOnClickListener { onDetailsClick(property) }
+        holder.layoutOwnerInfo.setOnClickListener {
+            val intent = Intent(context, OwnerPublicProfileActivity::class.java)
+            intent.putExtra("OWNER_ID", property.ownerId)
+            context.startActivity(intent)
+        }
+    }
+
+    private fun sendNotificationToOwner(userId: String, property: Property) {
+        val ownerId = property.ownerId ?: return
+        if (userId == ownerId) return // Don't notify self
+
+        val userRef = FirebaseDatabase.getInstance().getReference("Users").child(userId)
+        userRef.addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                if (snapshot.exists()) {
+                    val name = snapshot.child("name").value?.toString() ?: "Someone"
+                    val profilePic = snapshot.child("profileImageUrl").value?.toString() ?: ""
+                    
+                    val notifyRef = FirebaseDatabase.getInstance().getReference("Notifications").child(ownerId)
+                    val notifyId = notifyRef.push().key ?: return
+                    
+                    val notification = Notification(
+                        id = notifyId,
+                        fromUserId = userId,
+                        fromUserName = name,
+                        fromUserProfilePic = profilePic,
+                        propertyId = property.propertyId,
+                        propertyTitle = property.title,
+                        type = "LIKE"
+                    )
+                    
+                    notifyRef.child(notifyId).setValue(notification)
+                }
+            }
+            override fun onCancelled(error: DatabaseError) {}
+        })
+    }
+
+    override fun getItemCount(): Int = propertyList.size
+}

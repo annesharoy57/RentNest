@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">House Rental App</string>
-    <string name="rent_nest">RentNest</string>
+    <string name="app_name">RentNest</string>
     <string name="get_started">Get Started</string>
     <string name="to_find_your_house">TO FIND\nYOUR HOUSE</string>
     <string name="log_in_as">LOG-IN AS</string>

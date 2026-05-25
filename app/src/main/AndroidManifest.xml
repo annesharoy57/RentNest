@@ -2,6 +2,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Permissions for Maps and Location -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -12,7 +18,23 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.HouseRentalApp">
 
+        <!-- Map Activity -->
+        <activity
+            android:name="com.example.houserentalapp.MapActivity"
+            android:exported="false"
+            android:label="Map" />
+
+        <!-- Notification Activity -->
+        <activity
+            android:name="com.example.houserentalapp.NotificationActivity"
+            android:exported="false"
+            android:label="Notifications" />
+
         <!-- User Activities -->
+        <activity
+            android:name="com.example.houserentalapp.FavoriteActivity"
+            android:exported="false"
+            android:label="My Favorites" />
         <activity
             android:name="com.example.houserentalapp.PropertyDetailsActivity"
             android:exported="false" />
@@ -86,8 +108,10 @@
         <activity
             android:name="com.example.houserentalapp.Home2Activity"
             android:exported="false" />
+
         <activity
             android:name="com.example.houserentalapp.MainActivity"
+            android:theme="@style/Theme.App.Starting"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

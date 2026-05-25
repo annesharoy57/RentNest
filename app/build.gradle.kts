@@ -42,6 +42,10 @@ android {
     kotlinOptions {
         jvmTarget = "11"
     }
+    
+    buildFeatures {
+        viewBinding = true
+    }
 }
 
 dependencies {
@@ -50,6 +54,7 @@ dependencies {
     implementation(libs.material)
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
+    implementation("androidx.core:core-splashscreen:1.0.1")
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -63,6 +68,12 @@ dependencies {
     
     // Google Sign-In
     implementation("com.google.android.gms:play-services-auth:21.3.0")
+
+    // Location (still needed for GPS)
+    implementation(libs.play.services.location)
+
+    // OpenStreetMap (Free alternative to Google Maps)
+    implementation(libs.osmdroid)
 
     // Glide for image loading
     implementation(libs.glide)

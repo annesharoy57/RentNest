@@ -22,6 +22,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "House Rental App"
+rootProject.name = "RentNest"
 include(":app")
- 

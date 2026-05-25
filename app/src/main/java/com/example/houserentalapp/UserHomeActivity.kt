@@ -2,7 +2,7 @@ package com.example.houserentalapp
 
 import android.content.Intent
 import android.os.Bundle
-import android.widget.ImageButton
+import android.view.View
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -20,6 +20,9 @@ class UserHomeActivity : AppCompatActivity() {
     private lateinit var database: DatabaseReference
     private lateinit var ivProfilePic: ImageView
     private lateinit var tvUserName: TextView
+    
+    private var userRef: DatabaseReference? = null
+    private var userListener: ValueEventListener? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -31,7 +34,7 @@ class UserHomeActivity : AppCompatActivity() {
         ivProfilePic = findViewById(R.id.ivUserHomeProfilePic)
         tvUserName = findViewById(R.id.tvUserHomeName)
 
-        val btnBack = findViewById<ImageButton>(R.id.btnBackUserHome)
+        val btnLogout = findViewById<TextView>(R.id.btnBackUserHome)
         val navHome = findViewById<LinearLayout>(R.id.nav_home)
         val navExplore = findViewById<LinearLayout>(R.id.nav_explore)
         val navFavorite = findViewById<LinearLayout>(R.id.nav_favorite)
@@ -48,21 +51,15 @@ class UserHomeActivity : AppCompatActivity() {
             loadUserData(userId)
         }
 
-        // Back button listener - Goes back to Role Selection (Home2Activity)
-        btnBack.setOnClickListener {
-            val intent = Intent(this, Home2Activity::class.java)
-            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-            startActivity(intent)
-            finish()
+        // Logout listener
+        btnLogout.setOnClickListener {
+            logoutUser()
         }
 
         // Handle System Back Button
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                val intent = Intent(this@UserHomeActivity, Home2Activity::class.java)
-                intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-                startActivity(intent)
-                finish()
+                logoutUser()
             }
         })
 
@@ -76,7 +73,7 @@ class UserHomeActivity : AppCompatActivity() {
         }
 
         navFavorite.setOnClickListener {
-            Toast.makeText(this, "Favorites feature coming soon", Toast.LENGTH_SHORT).show()
+            startActivity(Intent(this, FavoriteActivity::class.java))
         }
 
         navProfile.setOnClickListener {
@@ -85,7 +82,9 @@ class UserHomeActivity : AppCompatActivity() {
 
         // Feature listeners
         cvMap.setOnClickListener {
-            Toast.makeText(this, "Map View coming soon", Toast.LENGTH_SHORT).show()
+            val intent = Intent(this, MapActivity::class.java)
+            intent.putExtra("PICK_MODE", false)
+            startActivity(intent)
         }
         cvBookings.setOnClickListener {
             Toast.makeText(this, "Bookings feature coming soon", Toast.LENGTH_SHORT).show()
@@ -98,8 +97,28 @@ class UserHomeActivity : AppCompatActivity() {
         }
     }
 
+    private fun logoutUser() {
+        removeListeners()
+        auth.signOut()
+        val intent = Intent(this, Home2Activity::class.java)
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        startActivity(intent)
+        finish()
+    }
+    
+    private fun removeListeners() {
+        userListener?.let { userRef?.removeEventListener(it) }
+        userListener = null
+    }
+
+    override fun onDestroy() {
+        removeListeners()
+        super.onDestroy()
+    }
+
     private fun loadUserData(userId: String) {
-        database.child(userId).addValueEventListener(object : ValueEventListener {
+        userRef = database.child(userId)
+        userListener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 if (snapshot.exists()) {
                     val name = snapshot.child("name").value?.toString() ?: "User"
@@ -109,11 +128,12 @@ class UserHomeActivity : AppCompatActivity() {
                         Glide.with(this@UserHomeActivity).load(imageUrl)
                             .placeholder(R.drawable.ic_person)
                             .circleCrop().into(ivProfilePic)
-                        ivProfilePic.imageTintList = null // Remove grey tint
+                        ivProfilePic.imageTintList = null
                     }
                 }
             }
-            override fun onCancelled(error: DatabaseError) { /* Silent */ }
-        })
+            override fun onCancelled(error: DatabaseError) { }
+        }
+        userRef?.addValueEventListener(userListener!!)
     }
 }
