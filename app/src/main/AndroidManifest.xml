@@ -2,7 +2,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Permissions for Maps and Location -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.INTERNET" />
@@ -18,19 +17,21 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.HouseRentalApp">
 
-        <!-- Map Activity -->
         <activity
             android:name="com.example.houserentalapp.MapActivity"
             android:exported="false"
             android:label="Map" />
 
-        <!-- Notification Activity -->
         <activity
             android:name="com.example.houserentalapp.NotificationActivity"
             android:exported="false"
             android:label="Notifications" />
 
-        <!-- User Activities -->
+        <activity
+            android:name="com.example.houserentalapp.OwnerBookingRequestsActivity"
+            android:exported="false"
+            android:label="Booking Requests" />
+
         <activity
             android:name="com.example.houserentalapp.SavedHousesActivity"
             android:exported="false"
@@ -73,7 +74,6 @@
             android:name="com.example.houserentalapp.UserSignInActivity"
             android:exported="false" />
 
-        <!-- Owner Activities -->
         <activity
             android:name="com.example.houserentalapp.OwnerPublicProfileActivity"
             android:exported="false" />
@@ -108,7 +108,6 @@
             android:name="com.example.houserentalapp.OwnerSignInActivity"
             android:exported="false" />
 
-        <!-- Admin & Core Activities -->
         <activity
             android:name="com.example.houserentalapp.AdminHomeActivity"
             android:exported="false" />

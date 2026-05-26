@@ -204,7 +204,7 @@ class ExploreAdapter(
                 favRef.removeValue()
             } else {
                 favRef.setValue(true)
-                sendNotificationToOwner(currentUserId, property)
+                sendNotificationToOwner(currentUserId, property, "LIKE")
             }
         }
 
@@ -261,6 +261,7 @@ class ExploreAdapter(
 
         btnPost.setOnClickListener {
             val rating = ratingBar.rating
+            val reviewMsg = etReview.text.toString().trim()
             if (rating == 0f) {
                 Toast.makeText(context, "Please select stars", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
@@ -275,7 +276,7 @@ class ExploreAdapter(
                 "propertyLocation" to (property.location ?: ""),
                 "userId" to currentUserId,
                 "rating" to rating,
-                "review" to etReview.text.toString().trim(),
+                "review" to reviewMsg,
                 "timestamp" to ServerValue.TIMESTAMP
             )
 
@@ -286,18 +287,46 @@ class ExploreAdapter(
 
             rootRef.updateChildren(updates).addOnSuccessListener {
                 Toast.makeText(context, "Review posted!", Toast.LENGTH_SHORT).show()
+                sendNotificationToOwner(currentUserId, property, "REVIEW", reviewMsg, rating)
                 dialog.dismiss()
             }
         }
         dialog.show()
     }
 
-    private fun sendNotificationToOwner(userId: String, property: Property) {
+    private fun sendNotificationToOwner(userId: String, property: Property, type: String, reviewText: String? = null, rating: Float = 0f) {
         val ownerId = property.ownerId ?: return
-        if (userId == ownerId) return
-        val notifyRef = FirebaseDatabase.getInstance().getReference("Notifications").child(ownerId).push()
-        val notification = Notification(id = notifyRef.key, fromUserId = userId, propertyId = property.propertyId, type = "LIKE")
-        notifyRef.setValue(notification)
+        if (userId == ownerId && type == "LIKE") return
+        
+        val userRef = FirebaseDatabase.getInstance().getReference("Users").child(userId)
+        userRef.addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                if (snapshot.exists()) {
+                    val name = snapshot.child("name").value?.toString() ?: "Someone"
+                    val profilePic = snapshot.child("profileImageUrl").value?.toString() ?: ""
+                    
+                    val notifyRef = FirebaseDatabase.getInstance().getReference("Notifications").child(ownerId)
+                    val notifyId = notifyRef.push().key ?: return
+                    
+                    val notification = Notification(
+                        id = notifyId,
+                        fromUserId = userId,
+                        fromUserName = name,
+                        fromUserProfilePic = profilePic,
+                        propertyId = property.propertyId,
+                        propertyTitle = property.title,
+                        propertyImage = (property.imageUrls?.firstOrNull() ?: ""),
+                        propertyPrice = property.rentAmount, // ADDED THIS
+                        type = type,
+                        reviewText = reviewText,
+                        rating = rating
+                    )
+                    
+                    notifyRef.child(notifyId).setValue(notification)
+                }
+            }
+            override fun onCancelled(error: DatabaseError) {}
+        })
     }
 
     override fun getItemCount(): Int = propertyList.size

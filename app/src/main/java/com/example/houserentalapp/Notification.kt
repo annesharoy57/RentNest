@@ -9,7 +9,12 @@ data class Notification(
     var fromUserProfilePic: String? = null,
     var propertyId: String? = null,
     var propertyTitle: String? = null,
-    var type: String? = "LIKE",
+    var propertyImage: String? = null,
+    var propertyPrice: String? = null,
+    var bookingId: String? = null,
+    var type: String? = "LIKE", // LIKE, REVIEW, BOOKING_REQUEST, BOOKING_ACCEPTED, BOOKING_DECLINED, BOOKING_PAID
+    var reviewText: String? = null,
+    var rating: Float = 0f,
     
     @get:PropertyName("isRead")
     @set:PropertyName("isRead")

@@ -191,64 +191,56 @@ class PropertyDetailsActivity : AppCompatActivity() {
     }
 
     private fun bookProperty() {
-        val userId = auth.currentUser?.uid
+        val user = auth.currentUser
         val property = currentProperty
-        if (userId == null) {
+        if (user == null) {
             Toast.makeText(this, "Please sign in to book", Toast.LENGTH_SHORT).show()
             return
         }
         if (property == null) return
 
-        val pId = property.propertyId ?: return
-        val bookingRef = FirebaseDatabase.getInstance().getReference("Bookings").child(userId).child(pId)
-        
-        val bookingData = hashMapOf(
-            "propertyId" to pId,
-            "propertyTitle" to property.title,
-            "propertyPrice" to property.rentAmount,
-            "propertyLocation" to property.location,
-            "propertyImage" to (property.imageUrls?.firstOrNull() ?: ""),
-            "ownerId" to property.ownerId,
-            "status" to "PENDING",
-            "timestamp" to ServerValue.TIMESTAMP
-        )
-
-        bookingRef.setValue(bookingData).addOnSuccessListener {
-            Toast.makeText(this, "Booking Successful!", Toast.LENGTH_SHORT).show()
-            sendBookingNotificationToOwner(userId, property)
-            
-            // AUTOMATICALLY OPEN BOOKINGS LIST
-            val intent = Intent(this, UserBookingsActivity::class.java)
-            startActivity(intent)
-            finish() // Optional: close details page
-
-        }.addOnFailureListener {
-            Toast.makeText(this, "Error: ${it.message}", Toast.LENGTH_LONG).show()
-        }
-    }
-
-    private fun sendBookingNotificationToOwner(userId: String, property: Property) {
+        val userId = user.uid
         val ownerId = property.ownerId ?: return
+        val pId = property.propertyId ?: return
+        
         val userRef = FirebaseDatabase.getInstance().getReference("Users").child(userId)
         userRef.addListenerForSingleValueEvent(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
-                if (snapshot.exists()) {
-                    val name = snapshot.child("name").value?.toString() ?: "Someone"
-                    val profilePic = snapshot.child("profileImageUrl").value?.toString() ?: ""
+                val userName = snapshot.child("name").value?.toString() ?: "User"
+                val userProfilePic = snapshot.child("profileImageUrl").value?.toString() ?: ""
+
+                val bookingId = FirebaseDatabase.getInstance().getReference("Bookings").child(userId).push().key ?: return
+                
+                val bookingData = Booking(
+                    bookingId = bookingId,
+                    propertyId = pId,
+                    propertyTitle = property.title,
+                    propertyPrice = property.rentAmount,
+                    propertyLocation = property.location,
+                    propertyImage = (property.imageUrls?.firstOrNull() ?: ""),
+                    ownerId = ownerId,
+                    userId = userId,
+                    userName = userName,
+                    userProfilePic = userProfilePic,
+                    status = "PENDING",
+                    timestamp = ServerValue.TIMESTAMP
+                )
+
+                val updates = hashMapOf<String, Any>()
+                // Save for User list
+                updates["/Bookings/$userId/$pId"] = bookingData
+                // Save for Owner Requests section (triggers the counter)
+                updates["/OwnerRequests/$ownerId/$bookingId"] = bookingData
+
+                FirebaseDatabase.getInstance().reference.updateChildren(updates).addOnSuccessListener {
+                    Toast.makeText(this@PropertyDetailsActivity, "Booking request sent!", Toast.LENGTH_SHORT).show()
                     
-                    val notifyRef = FirebaseDatabase.getInstance().getReference("Notifications").child(ownerId)
-                    val notifyId = notifyRef.push().key ?: return
-                    
-                    val notification = Notification(
-                        id = notifyId,
-                        fromUserId = userId,
-                        fromUserName = name,
-                        fromUserProfilePic = profilePic,
-                        propertyId = property.propertyId,
-                        propertyTitle = property.title,
-                        type = "BOOKING_REQUEST"
-                    )
-                    notifyRef.child(notifyId).setValue(notification)
+                    // Redirect to Bookings
+                    val intent = Intent(this@PropertyDetailsActivity, UserBookingsActivity::class.java)
+                    startActivity(intent)
+                    finish()
+                }.addOnFailureListener {
+                    Toast.makeText(this@PropertyDetailsActivity, "Error: ${it.message}", Toast.LENGTH_LONG).show()
                 }
             }
             override fun onCancelled(error: DatabaseError) {}

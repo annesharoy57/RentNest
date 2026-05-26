@@ -2,6 +2,7 @@ package com.example.houserentalapp
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.ImageButton
 import android.widget.ImageView
@@ -22,15 +23,21 @@ class OwnerHomeActivity : AppCompatActivity() {
     private lateinit var ivProfilePic: ImageView
     private lateinit var tvOwnerName: TextView
     private lateinit var tvPropertyCount: TextView
+    private lateinit var tvRequestCount: TextView
+    private lateinit var tvRevenueAmount: TextView
     private lateinit var tvNotificationBadge: TextView
 
     private var ownerListener: ValueEventListener? = null
     private var propertyListener: ValueEventListener? = null
     private var notificationListener: ValueEventListener? = null
+    private var requestListener: ValueEventListener? = null
+    private var revenueListener: ValueEventListener? = null
     
     private var ownerRef: DatabaseReference? = null
     private var propertyQuery: Query? = null
     private var notificationRef: DatabaseReference? = null
+    private var requestQuery: Query? = null
+    private var revenueRef: DatabaseReference? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -42,12 +49,15 @@ class OwnerHomeActivity : AppCompatActivity() {
         ivProfilePic = findViewById(R.id.ivOwnerHomeProfilePic)
         tvOwnerName = findViewById(R.id.tvOwnerHomeName)
         tvPropertyCount = findViewById(R.id.tvPropertyCount)
+        tvRequestCount = findViewById(R.id.tvRequestCount)
+        tvRevenueAmount = findViewById(R.id.tvRevenueAmount)
         tvNotificationBadge = findViewById(R.id.tvNotificationBadge)
 
         val btnLogout = findViewById<TextView>(R.id.btnBackOwnerHome)
         val navProfile = findViewById<LinearLayout>(R.id.nav_owner_profile)
         val cvAddProperty = findViewById<CardView>(R.id.cvAddProperty)
         val cvMyListings = findViewById<CardView>(R.id.cvMyListings)
+        val cvManageRequests = findViewById<CardView>(R.id.cvManageRequests)
         val btnNotifications = findViewById<ImageButton>(R.id.ivOwnerNotifications)
 
         val userId = auth.currentUser?.uid
@@ -55,6 +65,8 @@ class OwnerHomeActivity : AppCompatActivity() {
             loadOwnerData(userId)
             loadPropertyCount(userId)
             listenForNotifications(userId)
+            listenForBookingRequests(userId)
+            loadRevenue(userId)
         }
 
         btnLogout.setOnClickListener { logoutUser() }
@@ -80,6 +92,10 @@ class OwnerHomeActivity : AppCompatActivity() {
         cvMyListings.setOnClickListener {
             startActivity(Intent(this, MyListingsActivity::class.java))
         }
+
+        cvManageRequests.setOnClickListener {
+            startActivity(Intent(this, OwnerBookingRequestsActivity::class.java))
+        }
     }
 
     private fun logoutUser() {
@@ -95,10 +111,8 @@ class OwnerHomeActivity : AppCompatActivity() {
         ownerListener?.let { ownerRef?.removeEventListener(it) }
         propertyListener?.let { propertyQuery?.removeEventListener(it) }
         notificationListener?.let { notificationRef?.removeEventListener(it) }
-        
-        ownerListener = null
-        propertyListener = null
-        notificationListener = null
+        requestListener?.let { requestQuery?.removeEventListener(it) }
+        revenueListener?.let { revenueRef?.removeEventListener(it) }
     }
 
     override fun onDestroy() {
@@ -122,12 +136,12 @@ class OwnerHomeActivity : AppCompatActivity() {
                             .placeholder(R.drawable.ic_person)
                             .circleCrop()
                             .into(ivProfilePic)
-                        ivProfilePic.colorFilter = null
-                        ivProfilePic.imageTintList = null
                     }
                 }
             }
-            override fun onCancelled(error: DatabaseError) {}
+            override fun onCancelled(error: DatabaseError) {
+                Log.e("OwnerHome", "Owner Data Error: ${error.message}")
+            }
         }
         ownerRef?.addValueEventListener(ownerListener!!)
     }
@@ -140,7 +154,9 @@ class OwnerHomeActivity : AppCompatActivity() {
             override fun onDataChange(snapshot: DataSnapshot) {
                 tvPropertyCount.text = snapshot.childrenCount.toString()
             }
-            override fun onCancelled(error: DatabaseError) {}
+            override fun onCancelled(error: DatabaseError) {
+                Log.e("OwnerHome", "Property Count Error: ${error.message}")
+            }
         }
         propertyQuery?.addValueEventListener(propertyListener!!)
     }
@@ -165,9 +181,39 @@ class OwnerHomeActivity : AppCompatActivity() {
                     tvNotificationBadge.visibility = View.GONE
                 }
             }
-
-            override fun onCancelled(error: DatabaseError) {}
+            override fun onCancelled(error: DatabaseError) {
+                Log.e("OwnerHome", "Notification Error: ${error.message}")
+            }
         }
         notificationRef?.addValueEventListener(notificationListener!!)
+    }
+
+    private fun listenForBookingRequests(ownerId: String) {
+        requestQuery = FirebaseDatabase.getInstance().getReference("OwnerRequests").child(ownerId)
+            .orderByChild("status").equalTo("PENDING")
+        
+        requestListener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                tvRequestCount.text = snapshot.childrenCount.toString()
+            }
+            override fun onCancelled(error: DatabaseError) {
+                Log.e("OwnerHome", "Request Error: ${error.message}")
+            }
+        }
+        requestQuery?.addValueEventListener(requestListener!!)
+    }
+
+    private fun loadRevenue(ownerId: String) {
+        revenueRef = FirebaseDatabase.getInstance().getReference("Revenue").child(ownerId)
+        revenueListener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val revenue = snapshot.value?.toString() ?: "0"
+                tvRevenueAmount.text = "৳ $revenue"
+            }
+            override fun onCancelled(error: DatabaseError) {
+                Log.e("OwnerHome", "Revenue Error: ${error.message}")
+            }
+        }
+        revenueRef?.addValueEventListener(revenueListener!!)
     }
 }

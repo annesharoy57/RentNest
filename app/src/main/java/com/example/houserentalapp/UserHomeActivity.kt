@@ -3,6 +3,7 @@ package com.example.houserentalapp
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
+import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -19,9 +20,12 @@ class UserHomeActivity : AppCompatActivity() {
     private lateinit var database: DatabaseReference
     private lateinit var ivProfilePic: ImageView
     private lateinit var tvUserName: TextView
+    private lateinit var tvNotificationBadge: TextView
     
     private var userRef: DatabaseReference? = null
     private var userListener: ValueEventListener? = null
+    private var notificationRef: DatabaseReference? = null
+    private var notificationListener: ValueEventListener? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -32,8 +36,11 @@ class UserHomeActivity : AppCompatActivity() {
         
         ivProfilePic = findViewById(R.id.ivUserHomeProfilePic)
         tvUserName = findViewById(R.id.tvUserHomeName)
+        tvNotificationBadge = findViewById(R.id.tvUserNotificationBadge)
 
         val btnLogout = findViewById<TextView>(R.id.btnBackUserHome)
+        val btnNotifications = findViewById<ImageButton>(R.id.btnNotificationsHeader)
+        
         val navHome = findViewById<LinearLayout>(R.id.nav_home)
         val navExplore = findViewById<LinearLayout>(R.id.nav_explore)
         val navFavorite = findViewById<LinearLayout>(R.id.nav_favorite)
@@ -49,14 +56,17 @@ class UserHomeActivity : AppCompatActivity() {
 
         if (userId != null) {
             loadUserData(userId)
+            listenForNotifications(userId)
         }
 
-        // Logout listener
         btnLogout.setOnClickListener {
             logoutUser()
         }
+        
+        btnNotifications.setOnClickListener {
+            startActivity(Intent(this, NotificationActivity::class.java))
+        }
 
-        // Navigation listeners
         navHome.setOnClickListener {
             Toast.makeText(this, "You are already on Home", Toast.LENGTH_SHORT).show()
         }
@@ -73,12 +83,10 @@ class UserHomeActivity : AppCompatActivity() {
             startActivity(Intent(this, UserProfileActivity::class.java))
         }
 
-        // Category Listeners
         catHouse.setOnClickListener {
             startActivity(Intent(this, SavedHousesActivity::class.java))
         }
 
-        // Quick Services listeners
         cvMap.setOnClickListener {
             val intent = Intent(this, MapActivity::class.java)
             intent.putExtra("PICK_MODE", false)
@@ -106,7 +114,9 @@ class UserHomeActivity : AppCompatActivity() {
     
     private fun removeListeners() {
         userListener?.let { userRef?.removeEventListener(it) }
+        notificationListener?.let { notificationRef?.removeEventListener(it) }
         userListener = null
+        notificationListener = null
     }
 
     override fun onDestroy() {
@@ -133,5 +143,29 @@ class UserHomeActivity : AppCompatActivity() {
             override fun onCancelled(error: DatabaseError) { }
         }
         userRef?.addValueEventListener(userListener!!)
+    }
+
+    private fun listenForNotifications(userId: String) {
+        notificationRef = FirebaseDatabase.getInstance().getReference("Notifications").child(userId)
+        notificationListener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                var unreadCount = 0
+                for (data in snapshot.children) {
+                    val notification = data.getValue(Notification::class.java)
+                    if (notification != null && !notification.isRead) {
+                        unreadCount++
+                    }
+                }
+                
+                if (unreadCount > 0) {
+                    tvNotificationBadge.visibility = View.VISIBLE
+                    tvNotificationBadge.text = if (unreadCount > 9) "9+" else unreadCount.toString()
+                } else {
+                    tvNotificationBadge.visibility = View.GONE
+                }
+            }
+            override fun onCancelled(error: DatabaseError) {}
+        }
+        notificationRef?.addValueEventListener(notificationListener!!)
     }
 }
