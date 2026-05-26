@@ -4,6 +4,8 @@ import android.content.Intent
 import android.os.Bundle
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.FirebaseDatabase
 
 class AdminLoginActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -18,14 +20,34 @@ class AdminLoginActivity : AppCompatActivity() {
         backBtn.setOnClickListener { finish() }
 
         loginBtn.setOnClickListener {
-            val name = nameField.text.toString()
-            val pass = passField.text.toString()
+            val name = nameField.text.toString().trim()
+            val pass = passField.text.toString().trim()
 
-            // FIXED CREDENTIALS CHECK
-            if (name == "ANNESHA_ROY" && pass == "012345") {
-                val intent = Intent(this, AdminHomeActivity::class.java)
-                startActivity(intent)
-                finish() // Close login screen so user can't go back to it
+            // New Admin Credentials
+            if (name == "ar" && pass == "1234") {
+                // Background Firebase Login
+                FirebaseAuth.getInstance().signInWithEmailAndPassword("admin@rentnest.com", "admin1234")
+                    .addOnCompleteListener { task ->
+                        if (task.isSuccessful) {
+                            val user = task.result?.user
+                            if (user != null) {
+                                // AUTOMATIC SETUP: This code sets the "Admin" role for you!
+                                val adminRef = FirebaseDatabase.getInstance().getReference("Users").child(user.uid)
+                                val adminMap = mapOf(
+                                    "name" to "Admin",
+                                    "email" to "admin@rentnest.com",
+                                    "role" to "Admin"
+                                )
+                                adminRef.updateChildren(adminMap).addOnCompleteListener {
+                                    val intent = Intent(this, AdminHomeActivity::class.java)
+                                    startActivity(intent)
+                                    finish()
+                                }
+                            }
+                        } else {
+                            Toast.makeText(this, "Login Error: ${task.exception?.message}", Toast.LENGTH_LONG).show()
+                        }
+                    }
             } else {
                 Toast.makeText(this, "Wrong Name or Password!", Toast.LENGTH_SHORT).show()
             }

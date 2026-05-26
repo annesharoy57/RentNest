@@ -27,6 +27,9 @@ class UserBookingsActivity : AppCompatActivity() {
 
     private val auth = FirebaseAuth.getInstance()
     private val database = FirebaseDatabase.getInstance().getReference("Bookings")
+    
+    private var bookingsRef: DatabaseReference? = null
+    private var bookingsListener: ValueEventListener? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -49,7 +52,8 @@ class UserBookingsActivity : AppCompatActivity() {
         val userId = auth.currentUser?.uid ?: return
         pbBookings.visibility = View.VISIBLE
 
-        database.child(userId).addValueEventListener(object : ValueEventListener {
+        bookingsRef = database.child(userId)
+        bookingsListener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 bookingList.clear()
                 for (data in snapshot.children) {
@@ -65,9 +69,18 @@ class UserBookingsActivity : AppCompatActivity() {
 
             override fun onCancelled(error: DatabaseError) {
                 pbBookings.visibility = View.GONE
-                Toast.makeText(this@UserBookingsActivity, "Error: ${error.message}", Toast.LENGTH_SHORT).show()
+                // Check if user is still logged in to avoid "Permission Denied" Toast on logout
+                if (auth.currentUser != null) {
+                    Toast.makeText(this@UserBookingsActivity, "Error: ${error.message}", Toast.LENGTH_SHORT).show()
+                }
             }
-        })
+        }
+        bookingsRef?.addValueEventListener(bookingsListener!!)
+    }
+
+    override fun onDestroy() {
+        bookingsListener?.let { bookingsRef?.removeEventListener(it) }
+        super.onDestroy()
     }
 }
 

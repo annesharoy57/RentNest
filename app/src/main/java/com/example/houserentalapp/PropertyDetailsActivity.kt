@@ -42,6 +42,9 @@ class PropertyDetailsActivity : AppCompatActivity() {
     private var longitude: Double? = null
     private var currentProperty: Property? = null
     private val auth = FirebaseAuth.getInstance()
+    
+    private var propertyListener: ValueEventListener? = null
+    private var bookingListener: ValueEventListener? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -56,6 +59,7 @@ class PropertyDetailsActivity : AppCompatActivity() {
         initViews()
         database = FirebaseDatabase.getInstance().getReference("Properties").child(propertyId!!)
         loadPropertyDetails()
+        checkBookingStatus()
 
         findViewById<View>(R.id.btnBackDetails).setOnClickListener { finish() }
         
@@ -116,7 +120,7 @@ class PropertyDetailsActivity : AppCompatActivity() {
     }
 
     private fun loadPropertyDetails() {
-        database.addListenerForSingleValueEvent(object : ValueEventListener {
+        propertyListener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 val property = snapshot.getValue(Property::class.java)
                 if (property != null) {
@@ -130,6 +134,16 @@ class PropertyDetailsActivity : AppCompatActivity() {
                     
                     this@PropertyDetailsActivity.latitude = property.latitude
                     this@PropertyDetailsActivity.longitude = property.longitude
+
+                    if (!property.isAvailable) {
+                        btnBookNow.isEnabled = false
+                        btnBookNow.text = "Occupied"
+                        btnBookNow.alpha = 0.5f
+                    } else if (property.ownerId == auth.currentUser?.uid) {
+                        btnBookNow.visibility = View.GONE
+                    } else {
+                        btnBookNow.visibility = View.VISIBLE
+                    }
 
                     if (!property.imageUrls.isNullOrEmpty()) {
                         Glide.with(this@PropertyDetailsActivity).load(property.imageUrls!![0]).into(ivHeader)
@@ -150,7 +164,46 @@ class PropertyDetailsActivity : AppCompatActivity() {
                 }
             }
             override fun onCancelled(error: DatabaseError) {}
-        })
+        }
+        database.addValueEventListener(propertyListener!!)
+    }
+
+    private fun checkBookingStatus() {
+        val userId = auth.currentUser?.uid ?: return
+        val pId = propertyId ?: return
+
+        bookingListener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                if (snapshot.exists() && currentProperty?.ownerId != userId) {
+                    val status = snapshot.child("status").value?.toString() ?: "PENDING"
+                    when (status) {
+                        "PENDING" -> {
+                            btnBookNow.isEnabled = false
+                            btnBookNow.text = "Booking Pending"
+                            btnBookNow.alpha = 0.7f
+                        }
+                        "ACCEPTED" -> {
+                            btnBookNow.isEnabled = false
+                            btnBookNow.text = "Booking Accepted"
+                            btnBookNow.alpha = 0.7f
+                        }
+                        "PAID" -> {
+                            btnBookNow.isEnabled = false
+                            btnBookNow.text = "Property Rented"
+                            btnBookNow.alpha = 0.7f
+                        }
+                        "DECLINED" -> {
+                            btnBookNow.isEnabled = true
+                            btnBookNow.text = "Re-book Property"
+                            btnBookNow.alpha = 1.0f
+                        }
+                    }
+                }
+            }
+            override fun onCancelled(error: DatabaseError) {}
+        }
+        FirebaseDatabase.getInstance().getReference("Bookings").child(userId).child(pId)
+            .addValueEventListener(bookingListener!!)
     }
 
     private fun loadOwnerInfo(ownerId: String?) {
@@ -198,6 +251,11 @@ class PropertyDetailsActivity : AppCompatActivity() {
             return
         }
         if (property == null) return
+        
+        if (property.ownerId == user.uid) {
+            Toast.makeText(this, "You cannot book your own property", Toast.LENGTH_SHORT).show()
+            return
+        }
 
         val userId = user.uid
         val ownerId = property.ownerId ?: return
@@ -227,15 +285,13 @@ class PropertyDetailsActivity : AppCompatActivity() {
                 )
 
                 val updates = hashMapOf<String, Any>()
-                // Save for User list
                 updates["/Bookings/$userId/$pId"] = bookingData
-                // Save for Owner Requests section (triggers the counter)
                 updates["/OwnerRequests/$ownerId/$bookingId"] = bookingData
 
                 FirebaseDatabase.getInstance().reference.updateChildren(updates).addOnSuccessListener {
+                    sendBookingNotificationToOwner(ownerId, property, userName, userProfilePic, bookingId)
                     Toast.makeText(this@PropertyDetailsActivity, "Booking request sent!", Toast.LENGTH_SHORT).show()
                     
-                    // Redirect to Bookings
                     val intent = Intent(this@PropertyDetailsActivity, UserBookingsActivity::class.java)
                     startActivity(intent)
                     finish()
@@ -245,6 +301,38 @@ class PropertyDetailsActivity : AppCompatActivity() {
             }
             override fun onCancelled(error: DatabaseError) {}
         })
+    }
+
+    private fun sendBookingNotificationToOwner(ownerId: String, property: Property, userName: String, userProfilePic: String, bookingId: String) {
+        val notifyRef = FirebaseDatabase.getInstance().getReference("Notifications").child(ownerId)
+        val notifyId = notifyRef.push().key ?: return
+        
+        val notification = Notification(
+            id = notifyId,
+            fromUserId = auth.currentUser?.uid,
+            fromUserName = userName,
+            fromUserProfilePic = userProfilePic,
+            propertyId = property.propertyId,
+            propertyTitle = property.title,
+            propertyImage = (property.imageUrls?.firstOrNull() ?: ""),
+            propertyPrice = property.rentAmount,
+            bookingId = bookingId,
+            type = "BOOKING_REQUEST",
+            timestamp = System.currentTimeMillis()
+        )
+        notifyRef.child(notifyId).setValue(notification)
+    }
+
+    override fun onDestroy() {
+        propertyListener?.let { database.removeEventListener(it) }
+        bookingListener?.let { 
+            val userId = auth.currentUser?.uid
+            val pId = propertyId
+            if (userId != null && pId != null) {
+                FirebaseDatabase.getInstance().getReference("Bookings").child(userId).child(pId).removeEventListener(it)
+            }
+        }
+        super.onDestroy()
     }
 }
 

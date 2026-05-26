@@ -89,7 +89,6 @@ class NotificationActivity : AppCompatActivity() {
 
             override fun onCancelled(error: DatabaseError) {
                 pbNotifications.visibility = View.GONE
-                // SILENT: No Toast here to prevent logout annoyance
                 Log.e("NotificationActivity", "Database error: ${error.message}")
             }
         }
@@ -122,17 +121,59 @@ class NotificationActivity : AppCompatActivity() {
                 if (committed) {
                     val rootRef = FirebaseDatabase.getInstance().reference
                     val updates = hashMapOf<String, Any?>()
-                    updates["/Notifications/$userId/${notification.id}/type"] = "BOOKING_PAID"
-                    if (bookingId.isNotEmpty()) updates["/OwnerRequests/$ownerId/$bookingId/status"] = "PAID"
-                    if (propertyId.isNotEmpty()) updates["/Bookings/$userId/$propertyId/status"] = "PAID"
                     
-                    rootRef.updateChildren(updates)
-                    Toast.makeText(this@NotificationActivity, "Payment Successful!", Toast.LENGTH_LONG).show()
+                    // Update user's notification
+                    updates["/Notifications/$userId/${notification.id}/type"] = "BOOKING_PAID"
+                    
+                    // Update booking status in all places
+                    if (bookingId.isNotEmpty()) updates["/OwnerRequests/$ownerId/$bookingId/status"] = "PAID"
+                    if (propertyId.isNotEmpty()) {
+                        updates["/Bookings/$userId/$propertyId/status"] = "PAID"
+                        // CRITICAL: Mark property as Occupied
+                        updates["/Properties/$propertyId/available"] = false
+                    }
+                    
+                    rootRef.updateChildren(updates).addOnSuccessListener {
+                        Toast.makeText(this@NotificationActivity, "Payment Successful! Property Rented.", Toast.LENGTH_LONG).show()
+                        notifyOwnerOfPayment(ownerId, notification)
+                    }
                 } else {
                     Log.e("NotificationActivity", "Payment failed: ${error?.message}")
+                    Toast.makeText(this@NotificationActivity, "Payment Failed", Toast.LENGTH_SHORT).show()
                 }
             }
         })
+    }
+
+    private fun notifyOwnerOfPayment(ownerId: String, oldNotify: Notification) {
+        val userId = auth.currentUser?.uid ?: return
+        
+        // Fetch current user name for the notification
+        FirebaseDatabase.getInstance().getReference("Users").child(userId).child("name")
+            .addListenerForSingleValueEvent(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    val userName = snapshot.value?.toString() ?: "User"
+                    val userProfilePic = "" // Could fetch if needed
+                    
+                    val notifyRef = FirebaseDatabase.getInstance().getReference("Notifications").child(ownerId)
+                    val notifyId = notifyRef.push().key ?: return
+                    
+                    val notification = Notification(
+                        id = notifyId,
+                        fromUserId = userId,
+                        fromUserName = userName,
+                        propertyId = oldNotify.propertyId,
+                        propertyTitle = oldNotify.propertyTitle,
+                        propertyImage = oldNotify.propertyImage,
+                        propertyPrice = oldNotify.propertyPrice,
+                        bookingId = oldNotify.bookingId,
+                        type = "BOOKING_PAID", // Owner sees "User has paid"
+                        timestamp = System.currentTimeMillis()
+                    )
+                    notifyRef.child(notifyId).setValue(notification)
+                }
+                override fun onCancelled(error: DatabaseError) {}
+            })
     }
 
     override fun onDestroy() {
@@ -204,7 +245,15 @@ class NotificationAdapter(
                 showPropertyDetails(holder, notification)
             }
             "BOOKING_PAID" -> {
-                setStyledText(holder.tvText, userName, "'s payment confirmed!")
+                // If the current user is the payer, show "Payment confirmed"
+                // If the current user is the owner, show "Received payment from..."
+                val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
+                if (notification.fromUserId == currentUserId) {
+                    setStyledText(holder.tvText, "Your payment", " for ${notification.propertyTitle} is confirmed!")
+                } else {
+                    setStyledText(holder.tvText, userName, " has paid for ${notification.propertyTitle}")
+                }
+
                 holder.btnPayNow.visibility = View.VISIBLE
                 holder.btnPayNow.text = "Paid Successfully"
                 holder.btnPayNow.isEnabled = false

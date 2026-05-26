@@ -222,12 +222,46 @@ class ExploreAdapter(
                 when (menuItem.itemId) {
                     R.id.action_save -> { saveProperty(context, property); true }
                     R.id.action_review -> { showReviewDialog(context, property); true }
-                    R.id.action_report -> { Toast.makeText(context, "Property Reported", Toast.LENGTH_SHORT).show(); true }
+                    R.id.action_report -> { reportProperty(context, property); true }
                     else -> false
                 }
             }
             popup.show()
         }
+    }
+
+    private fun reportProperty(context: android.content.Context, property: Property) {
+        if (currentUserId == null) {
+            Toast.makeText(context, "Please sign in to report", Toast.LENGTH_SHORT).show()
+            return
+        }
+        
+        val userRef = FirebaseDatabase.getInstance().getReference("Users").child(currentUserId)
+        userRef.addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val reporterName = snapshot.child("name").value?.toString() ?: "Someone"
+                
+                val reportRef = FirebaseDatabase.getInstance().getReference("Reports")
+                val reportId = reportRef.push().key ?: return
+                
+                val reportData = hashMapOf(
+                    "reportId" to reportId,
+                    "reporterId" to currentUserId,
+                    "reporterName" to reporterName,
+                    "propertyId" to property.propertyId,
+                    "ownerId" to property.ownerId,
+                    "propertyTitle" to property.title,
+                    "propertyImage" to (property.imageUrls?.firstOrNull() ?: ""),
+                    "timestamp" to ServerValue.TIMESTAMP,
+                    "status" to "PENDING"
+                )
+                
+                reportRef.child(reportId).setValue(reportData).addOnSuccessListener {
+                    Toast.makeText(context, "Property Reported to Admin", Toast.LENGTH_SHORT).show()
+                }
+            }
+            override fun onCancelled(error: DatabaseError) {}
+        })
     }
 
     private fun saveProperty(context: android.content.Context, property: Property) {
@@ -316,7 +350,7 @@ class ExploreAdapter(
                         propertyId = property.propertyId,
                         propertyTitle = property.title,
                         propertyImage = (property.imageUrls?.firstOrNull() ?: ""),
-                        propertyPrice = property.rentAmount, // ADDED THIS
+                        propertyPrice = property.rentAmount,
                         type = type,
                         reviewText = reviewText,
                         rating = rating

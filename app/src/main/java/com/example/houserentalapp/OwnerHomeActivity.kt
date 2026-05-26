@@ -55,6 +55,7 @@ class OwnerHomeActivity : AppCompatActivity() {
 
         val btnLogout = findViewById<TextView>(R.id.btnBackOwnerHome)
         val navProfile = findViewById<LinearLayout>(R.id.nav_owner_profile)
+        val navReport = findViewById<LinearLayout>(R.id.nav_owner_report_user) // Changed from calendar
         val cvAddProperty = findViewById<CardView>(R.id.cvAddProperty)
         val cvMyListings = findViewById<CardView>(R.id.cvMyListings)
         val cvManageRequests = findViewById<CardView>(R.id.cvManageRequests)
@@ -83,6 +84,14 @@ class OwnerHomeActivity : AppCompatActivity() {
 
         navProfile.setOnClickListener {
             startActivity(Intent(this, OwnerProfileActivity::class.java))
+        }
+
+        navReport.setOnClickListener {
+            // Reusing AdminUserListActivity for reporting users
+            val intent = Intent(this, AdminUserListActivity::class.java)
+            intent.putExtra("ROLE", "User")
+            intent.putExtra("IS_OWNER_REPORTING", true)
+            startActivity(intent)
         }
 
         cvAddProperty.setOnClickListener {

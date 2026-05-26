@@ -26,6 +26,7 @@ class FavoriteActivity : AppCompatActivity() {
 
     private var favRef: DatabaseReference? = null
     private var favListener: ValueEventListener? = null
+    private val propertiesRef = FirebaseDatabase.getInstance().getReference("Properties")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -56,7 +57,6 @@ class FavoriteActivity : AppCompatActivity() {
         pbFavorite.visibility = View.VISIBLE
 
         favRef = database.getReference("Favorites").child(userId)
-        val propertiesRef = database.getReference("Properties")
 
         favListener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
@@ -82,22 +82,21 @@ class FavoriteActivity : AppCompatActivity() {
                         for (id in favIds) {
                             val prop = propSnapshot.child(id).getValue(Property::class.java)
                             if (prop != null) {
-                                prop.propertyId = id // Fix: Set ID from the key
+                                prop.propertyId = id
                                 favoriteList.add(prop)
                             }
                         }
                         
                         pbFavorite.visibility = View.GONE
-                        if (favoriteList.isEmpty()) {
-                            tvNoFavorites.visibility = View.VISIBLE
-                        } else {
-                            tvNoFavorites.visibility = View.GONE
-                        }
+                        tvNoFavorites.visibility = if (favoriteList.isEmpty()) View.VISIBLE else View.GONE
                         adapter.notifyDataSetChanged()
                     }
 
                     override fun onCancelled(error: DatabaseError) {
                         pbFavorite.visibility = View.GONE
+                        if (auth.currentUser != null) {
+                            Toast.makeText(this@FavoriteActivity, "Error: ${error.message}", Toast.LENGTH_SHORT).show()
+                        }
                     }
                 })
             }

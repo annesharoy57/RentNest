@@ -26,6 +26,9 @@ class OwnerBookingRequestsActivity : AppCompatActivity() {
 
     private val auth = FirebaseAuth.getInstance()
     private val database = FirebaseDatabase.getInstance()
+    
+    private var requestRef: DatabaseReference? = null
+    private var requestListener: ValueEventListener? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -51,8 +54,8 @@ class OwnerBookingRequestsActivity : AppCompatActivity() {
         val ownerId = auth.currentUser?.uid ?: return
         pbRequests.visibility = View.VISIBLE
 
-        val requestRef = database.getReference("OwnerRequests").child(ownerId)
-        requestRef.addValueEventListener(object : ValueEventListener {
+        requestRef = database.getReference("OwnerRequests").child(ownerId)
+        requestListener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 requestList.clear()
                 for (data in snapshot.children) {
@@ -69,9 +72,17 @@ class OwnerBookingRequestsActivity : AppCompatActivity() {
 
             override fun onCancelled(error: DatabaseError) {
                 pbRequests.visibility = View.GONE
-                Toast.makeText(this@OwnerBookingRequestsActivity, "Error: ${error.message}", Toast.LENGTH_SHORT).show()
+                if (auth.currentUser != null) {
+                    Toast.makeText(this@OwnerBookingRequestsActivity, "Error: ${error.message}", Toast.LENGTH_SHORT).show()
+                }
             }
-        })
+        }
+        requestRef?.addValueEventListener(requestListener!!)
+    }
+
+    override fun onDestroy() {
+        requestListener?.let { requestRef?.removeEventListener(it) }
+        super.onDestroy()
     }
 
     private fun updateBookingStatus(booking: Booking, newStatus: String) {
@@ -80,14 +91,11 @@ class OwnerBookingRequestsActivity : AppCompatActivity() {
         val bookingId = booking.bookingId ?: return
         val propertyId = booking.propertyId ?: return
 
-        // Fetch Owner Details to send in the notification properly
         database.getReference("Users").child(ownerId).addListenerForSingleValueEvent(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 val ownerName = snapshot.child("name").value?.toString() ?: "Owner"
                 val ownerProfilePic = snapshot.child("profileImageUrl").value?.toString() ?: ""
 
-                // UPDATE BOTH NODES (Owner's request node and User's booking node)
-                // With the new rules, the owner has permission to write to /Bookings/userId
                 val updates = hashMapOf<String, Any?>()
                 updates["/OwnerRequests/$ownerId/$bookingId/status"] = newStatus
                 updates["/Bookings/$userId/$propertyId/status"] = newStatus
@@ -98,14 +106,14 @@ class OwnerBookingRequestsActivity : AppCompatActivity() {
                         sendNotificationToUser(booking, newStatus, ownerName, ownerProfilePic)
                     }
                     .addOnFailureListener { e ->
-                        // If it fails, it might be a permission issue with /Bookings/userId
-                        // But with the latest rules provided by user, it should work.
                         Toast.makeText(this@OwnerBookingRequestsActivity, "Error: ${e.message}", Toast.LENGTH_LONG).show()
                         Log.e("OwnerRequests", "Permission Denied or Error: ${e.message}")
                     }
             }
             override fun onCancelled(error: DatabaseError) {
-                Toast.makeText(this@OwnerBookingRequestsActivity, "Failed to fetch owner info", Toast.LENGTH_SHORT).show()
+                if (auth.currentUser != null) {
+                    Toast.makeText(this@OwnerBookingRequestsActivity, "Failed to fetch owner info", Toast.LENGTH_SHORT).show()
+                }
             }
         })
     }

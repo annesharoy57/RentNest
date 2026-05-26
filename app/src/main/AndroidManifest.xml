@@ -18,6 +18,23 @@
         android:theme="@style/Theme.HouseRentalApp">
 
         <activity
+            android:name="com.example.houserentalapp.AdminUserListActivity"
+            android:exported="false"
+            android:label="User Directory" />
+        <activity
+            android:name="com.example.houserentalapp.AdminHouseListActivity"
+            android:exported="false"
+            android:label="Property Directory" />
+        <activity
+            android:name="com.example.houserentalapp.AdminReportsActivity"
+            android:exported="false"
+            android:label="Reports" />
+        <activity
+            android:name="com.example.houserentalapp.AdminProfileActivity"
+            android:exported="false"
+            android:label="Admin Profile" />
+
+        <activity
             android:name="com.example.houserentalapp.MapActivity"
             android:exported="false"
             android:label="Map" />

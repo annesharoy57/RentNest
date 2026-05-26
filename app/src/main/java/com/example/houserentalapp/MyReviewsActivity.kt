@@ -29,6 +29,9 @@ class MyReviewsActivity : AppCompatActivity() {
 
     private val auth = FirebaseAuth.getInstance()
     private val database = FirebaseDatabase.getInstance().getReference("UserReviews")
+    
+    private var reviewsRef: DatabaseReference? = null
+    private var reviewsListener: ValueEventListener? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -55,7 +58,8 @@ class MyReviewsActivity : AppCompatActivity() {
         val userId = auth.currentUser?.uid ?: return
         pbReviews.visibility = View.VISIBLE
 
-        database.child(userId).addValueEventListener(object : ValueEventListener {
+        reviewsRef = database.child(userId)
+        reviewsListener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 reviewList.clear()
                 for (data in snapshot.children) {
@@ -75,9 +79,18 @@ class MyReviewsActivity : AppCompatActivity() {
 
             override fun onCancelled(error: DatabaseError) {
                 pbReviews.visibility = View.GONE
-                Toast.makeText(this@MyReviewsActivity, "Error: ${error.message}", Toast.LENGTH_SHORT).show()
+                // Check if user is still logged in to avoid "Permission Denied" Toast on logout
+                if (auth.currentUser != null) {
+                    Toast.makeText(this@MyReviewsActivity, "Error: ${error.message}", Toast.LENGTH_SHORT).show()
+                }
             }
-        })
+        }
+        reviewsRef?.addValueEventListener(reviewsListener!!)
+    }
+
+    override fun onDestroy() {
+        reviewsListener?.let { reviewsRef?.removeEventListener(it) }
+        super.onDestroy()
     }
 
     private fun showEditReviewDialog(review: Review) {

@@ -24,6 +24,9 @@ class SavedHousesActivity : AppCompatActivity() {
     private val auth = FirebaseAuth.getInstance()
     private val database = FirebaseDatabase.getInstance()
 
+    private var saveRef: DatabaseReference? = null
+    private var saveListener: ValueEventListener? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_saved_houses)
@@ -52,8 +55,8 @@ class SavedHousesActivity : AppCompatActivity() {
         val userId = auth.currentUser?.uid ?: return
         pbSaved.visibility = View.VISIBLE
 
-        val saveRef = database.getReference("SavedProperties").child(userId)
-        saveRef.addValueEventListener(object : ValueEventListener {
+        saveRef = database.getReference("SavedProperties").child(userId)
+        saveListener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 savedList.clear()
                 for (data in snapshot.children) {
@@ -75,8 +78,17 @@ class SavedHousesActivity : AppCompatActivity() {
 
             override fun onCancelled(error: DatabaseError) {
                 pbSaved.visibility = View.GONE
-                Toast.makeText(this@SavedHousesActivity, "Error: ${error.message}", Toast.LENGTH_SHORT).show()
+                // Check if user is still logged in to avoid "Permission Denied" Toast on logout
+                if (auth.currentUser != null) {
+                    Toast.makeText(this@SavedHousesActivity, "Error: ${error.message}", Toast.LENGTH_SHORT).show()
+                }
             }
-        })
+        }
+        saveRef?.addValueEventListener(saveListener!!)
+    }
+
+    override fun onDestroy() {
+        saveListener?.let { saveRef?.removeEventListener(it) }
+        super.onDestroy()
     }
 }

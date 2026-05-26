@@ -94,7 +94,7 @@
             android:layout_width="44dp"
             android:layout_height="44dp"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/notifications_desc"
+            android:contentDescription="Notifications"
             android:padding="8dp"
             android:src="@drawable/ic_notifications"
             app:tint="@color/white" />
@@ -144,14 +144,14 @@
                     android:id="@+id/tvPropertyCount"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/zero"
+                    android:text="0"
                     android:textColor="@color/primary_blue"
                     android:textSize="22sp"
                     android:textStyle="bold" />
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/houses_label"
+                    android:text="Houses"
                     android:textSize="12sp"
                     android:textColor="#757575" />
             </LinearLayout>
@@ -171,14 +171,14 @@
                     android:id="@+id/tvRequestCount"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/zero"
+                    android:text="0"
                     android:textColor="#FF9800"
                     android:textSize="22sp"
                     android:textStyle="bold" />
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/requests_label"
+                    android:text="Requests"
                     android:textSize="12sp"
                     android:textColor="#757575" />
             </LinearLayout>
@@ -199,14 +199,14 @@
                     android:id="@+id/tvRevenueAmount"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/zero"
+                    android:text="0"
                     android:textColor="#4CAF50"
                     android:textSize="22sp"
                     android:textStyle="bold" />
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/revenue_label"
+                    android:text="Revenue"
                     android:textSize="12sp"
                     android:textColor="#757575" />
             </LinearLayout>
@@ -233,7 +233,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
-                android:text="@string/quick_actions"
+                android:text="Quick Actions"
                 android:textColor="#333333"
                 android:textSize="18sp"
                 android:textStyle="bold" />
@@ -266,13 +266,13 @@
                             android:layout_width="48dp"
                             android:layout_height="48dp"
                             android:src="@drawable/ic_add_house"
-                            android:contentDescription="@string/add_house"
+                            android:contentDescription="Add House"
                             app:tint="#1976D2" />
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
-                            android:text="@string/add_house"
+                            android:text="Add House"
                             android:textColor="#1976D2"
                             android:textStyle="bold" />
                     </LinearLayout>
@@ -300,13 +300,13 @@
                             android:layout_width="48dp"
                             android:layout_height="48dp"
                             android:src="@drawable/ic_explore"
-                            android:contentDescription="@string/rent_tracker"
+                            android:contentDescription="Rent Tracker"
                             app:tint="#388E3C" />
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
-                            android:text="@string/rent_tracker"
+                            android:text="Rent Tracker"
                             android:textColor="#388E3C"
                             android:textStyle="bold" />
                     </LinearLayout>
@@ -334,13 +334,13 @@
                             android:layout_width="48dp"
                             android:layout_height="48dp"
                             android:src="@drawable/ic_booking"
-                            android:contentDescription="@string/booking_requests"
+                            android:contentDescription="Booking Requests"
                             app:tint="#F57C00" />
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
-                            android:text="@string/booking_requests"
+                            android:text="Booking Requests"
                             android:textColor="#F57C00"
                             android:textStyle="bold" />
                     </LinearLayout>
@@ -368,13 +368,13 @@
                             android:layout_width="48dp"
                             android:layout_height="48dp"
                             android:src="@drawable/ic_home"
-                            android:contentDescription="@string/my_listings"
+                            android:contentDescription="My Listings"
                             app:tint="#7B1FA2" />
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
-                            android:text="@string/my_listings"
+                            android:text="My Listings"
                             android:textColor="#7B1FA2"
                             android:textStyle="bold" />
                     </LinearLayout>
@@ -421,20 +421,20 @@
                     android:layout_height="26dp"
                     android:src="@drawable/ic_home"
                     app:tint="@color/primary_blue"
-                    android:contentDescription="@string/home" />
+                    android:contentDescription="Home" />
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
-                    android:text="@string/home"
+                    android:text="Home"
                     android:textColor="@color/primary_blue"
                     android:textSize="12sp"
                     android:textStyle="bold" />
             </LinearLayout>
 
-            <!-- Calendar -->
+            <!-- Report User -->
             <LinearLayout
-                android:id="@+id/nav_owner_calendar"
+                android:id="@+id/nav_owner_report_user"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
@@ -446,14 +446,14 @@
                 <ImageView
                     android:layout_width="26dp"
                     android:layout_height="26dp"
-                    android:src="@drawable/ic_calendar"
+                    android:src="@drawable/ic_notifications"
                     app:tint="#A0A0A0"
-                    android:contentDescription="@string/calendar" />
+                    android:contentDescription="Report User" />
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
-                    android:text="@string/calendar"
+                    android:text="Report"
                     android:textColor="#A0A0A0"
                     android:textSize="12sp" />
             </LinearLayout>
@@ -474,12 +474,12 @@
                     android:layout_height="26dp"
                     android:src="@drawable/ic_person"
                     app:tint="#A0A0A0"
-                    android:contentDescription="@string/profile" />
+                    android:contentDescription="Profile" />
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
-                    android:text="@string/profile"
+                    android:text="Profile"
                     android:textColor="#A0A0A0"
                     android:textSize="12sp" />
             </LinearLayout>

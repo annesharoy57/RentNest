@@ -64,16 +64,13 @@ class MyListingsActivity : AppCompatActivity() {
                     property?.let { propertyList.add(it) }
                 }
                 pbMyListings.visibility = View.GONE
-                if (propertyList.isEmpty()) {
-                    tvEmptyListings.visibility = View.VISIBLE
-                } else {
-                    tvEmptyListings.visibility = View.GONE
-                }
+                tvEmptyListings.visibility = if (propertyList.isEmpty()) View.VISIBLE else View.GONE
                 adapter.updateList(propertyList)
             }
 
             override fun onCancelled(error: DatabaseError) {
                 pbMyListings.visibility = View.GONE
+                // Prevent "Permission Denied" Toast on logout
                 if (auth.currentUser != null) {
                     Toast.makeText(this@MyListingsActivity, "Error: ${error.message}", Toast.LENGTH_SHORT).show()
                 }
