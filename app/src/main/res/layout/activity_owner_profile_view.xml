@@ -162,7 +162,7 @@
                         <ImageView
                             android:layout_width="20dp"
                             android:layout_height="20dp"
-                            android:src="@drawable/ic_notifications"
+                            android:src="@drawable/ic_call"
                             app:tint="@color/primary_blue" />
                         <TextView
                             android:id="@+id/tvOwnerPhone"

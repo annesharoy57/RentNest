@@ -31,14 +31,27 @@ class AdminLoginActivity : AppCompatActivity() {
                         if (task.isSuccessful) {
                             val user = task.result?.user
                             if (user != null) {
-                                // AUTOMATIC SETUP: This code sets the "Admin" role for you!
                                 val adminRef = FirebaseDatabase.getInstance().getReference("Users").child(user.uid)
-                                val adminMap = mapOf(
-                                    "name" to "Admin",
-                                    "email" to "admin@rentnest.com",
-                                    "role" to "Admin"
-                                )
-                                adminRef.updateChildren(adminMap).addOnCompleteListener {
+                                
+                                // FIX: Check if name already exists before overwriting it
+                                adminRef.child("name").get().addOnSuccessListener { snapshot ->
+                                    val updates = mutableMapOf<String, Any>(
+                                        "email" to "admin@rentnest.com",
+                                        "role" to "Admin"
+                                    )
+                                    
+                                    // Only set name to "Admin" if it's currently empty/null
+                                    if (!snapshot.exists() || snapshot.value == null) {
+                                        updates["name"] = "Admin"
+                                    }
+                                    
+                                    adminRef.updateChildren(updates).addOnCompleteListener {
+                                        val intent = Intent(this, AdminHomeActivity::class.java)
+                                        startActivity(intent)
+                                        finish()
+                                    }
+                                }.addOnFailureListener {
+                                    // Fallback: just go to home if read fails
                                     val intent = Intent(this, AdminHomeActivity::class.java)
                                     startActivity(intent)
                                     finish()

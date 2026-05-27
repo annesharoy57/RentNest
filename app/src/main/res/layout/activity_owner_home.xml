@@ -446,7 +446,7 @@
                 <ImageView
                     android:layout_width="26dp"
                     android:layout_height="26dp"
-                    android:src="@drawable/ic_notifications"
+                    android:src="@drawable/ic_report"
                     app:tint="#A0A0A0"
                     android:contentDescription="Report User" />
                 <TextView

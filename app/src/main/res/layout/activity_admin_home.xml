@@ -67,7 +67,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="System Administrator"
+                android:text="Admin"
                 android:textColor="#E0E0E0"
                 android:textSize="14sp" />
             <TextView
@@ -367,7 +367,7 @@
                         <ImageView
                             android:layout_width="48dp"
                             android:layout_height="48dp"
-                            android:src="@drawable/ic_notifications"
+                            android:src="@drawable/ic_report"
                             android:contentDescription="Reports"
                             app:tint="#C2185B" />
                         <TextView

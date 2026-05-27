@@ -164,7 +164,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
                 android:hint="@string/phone_number"
-                app:endIconDrawable="@drawable/ic_notifications"
+                app:endIconDrawable="@drawable/ic_call"
                 app:endIconTint="@color/primary_blue">
 
                 <com.google.android.material.textfield.TextInputEditText
