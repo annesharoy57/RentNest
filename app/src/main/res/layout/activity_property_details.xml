@@ -37,9 +37,10 @@
             <androidx.appcompat.widget.Toolbar
                 android:id="@+id/toolbar"
                 android:layout_width="match_parent"
-                android:layout_height="?attr/actionBarSize"
+                android:layout_height="82dp"
                 app:layout_collapseMode="pin"
                 app:popupTheme="@style/ThemeOverlay.AppCompat.Light">
+
                 <ImageButton
                     android:id="@+id/btnBackDetails"
                     android:layout_width="40dp"
@@ -270,23 +271,27 @@
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
         app:cardElevation="16dp">
+
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="151dp"
             android:gravity="center_vertical"
             android:orientation="horizontal"
             android:padding="16dp">
+
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:orientation="vertical">
+
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Monthly Rent"
                     android:textColor="#757575"
                     android:textSize="14sp" />
+
                 <TextView
                     android:id="@+id/tvDetailPrice"
                     android:layout_width="wrap_content"
@@ -296,10 +301,11 @@
                     android:textSize="20sp"
                     android:textStyle="bold" />
             </LinearLayout>
+
             <Button
                 android:id="@+id/btnBookNow"
                 android:layout_width="160dp"
-                android:layout_height="55dp"
+                android:layout_height="76dp"
                 android:backgroundTint="@color/primary_blue"
                 android:text="Book Now"
                 android:textAllCaps="false"

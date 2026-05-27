@@ -125,7 +125,6 @@ class ExploreAdapter(
         val btnViewDetails: TextView = view.findViewById(R.id.btnViewDetails)
         val layoutOwnerInfo: View = view.findViewById(R.id.layoutOwnerInfo)
         val btnLike: TextView = view.findViewById(R.id.btnLike)
-        val btnShare: TextView = view.findViewById(R.id.btnShare)
         val btnMore: ImageButton = view.findViewById(R.id.btnMore)
     }
 

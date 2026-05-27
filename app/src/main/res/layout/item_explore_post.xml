@@ -192,21 +192,6 @@
                 app:drawableStartCompat="@drawable/ic_search"
                 app:drawableTint="#65676B"
                 android:drawablePadding="6dp" />
-
-            <TextView
-                android:id="@+id/btnShare"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:gravity="center"
-                android:padding="10dp"
-                android:text="Share"
-                android:textColor="#65676B"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                app:drawableStartCompat="@drawable/ic_filter"
-                app:drawableTint="#65676B"
-                android:drawablePadding="6dp" />
         </LinearLayout>
 
     </LinearLayout>
