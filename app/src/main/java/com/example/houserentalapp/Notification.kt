@@ -11,6 +11,7 @@ data class Notification(
     var propertyTitle: String? = null,
     var propertyImage: String? = null,
     var propertyPrice: String? = null,
+    var propertyLocation: String? = null,
     var bookingId: String? = null,
     var type: String? = "LIKE", // LIKE, REVIEW, BOOKING_REQUEST, BOOKING_ACCEPTED, BOOKING_DECLINED, BOOKING_PAID
     var reviewText: String? = null,

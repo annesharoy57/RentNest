@@ -96,7 +96,9 @@ class UserHomeActivity : AppCompatActivity() {
             startActivity(Intent(this, UserBookingsActivity::class.java))
         }
         cvPayments.setOnClickListener {
-            Toast.makeText(this, "Payments feature coming soon", Toast.LENGTH_SHORT).show()
+            val intent = Intent(this, PaymentsListActivity::class.java)
+            intent.putExtra("IS_OWNER", false)
+            startActivity(intent)
         }
         cvReviews.setOnClickListener {
             startActivity(Intent(this, MyReviewsActivity::class.java))

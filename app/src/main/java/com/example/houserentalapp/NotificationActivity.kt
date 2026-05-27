@@ -1,6 +1,9 @@
 package com.example.houserentalapp
 
+import android.app.Dialog
+import android.graphics.Color
 import android.graphics.Typeface
+import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.text.SpannableString
 import android.text.Spanned
@@ -10,11 +13,8 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
-import android.widget.ImageView
-import android.widget.RatingBar
-import android.widget.TextView
-import android.widget.Toast
+import android.view.Window
+import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -48,7 +48,7 @@ class NotificationActivity : AppCompatActivity() {
 
         rvNotifications.layoutManager = LinearLayoutManager(this)
         adapter = NotificationAdapter(notificationList) { notification ->
-            processPayment(notification)
+            showBkashPaymentDialog(notification)
         }
         rvNotifications.adapter = adapter
 
@@ -95,11 +95,50 @@ class NotificationActivity : AppCompatActivity() {
         notificationsQuery?.addValueEventListener(notificationListener!!)
     }
 
-    private fun processPayment(notification: Notification) {
+    private fun showBkashPaymentDialog(notification: Notification) {
+        val ownerId = notification.fromUserId ?: return
+        
+        val dialog = Dialog(this)
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dialog.setContentView(R.layout.dialog_bkash_payment)
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+
+        val tvOwnerBkash = dialog.findViewById<TextView>(R.id.tvOwnerBkashNumber)
+        val etUserBkash = dialog.findViewById<EditText>(R.id.etUserBkashNumber)
+        val etTxnId = dialog.findViewById<EditText>(R.id.etTransactionId)
+        val btnConfirm = dialog.findViewById<Button>(R.id.btnConfirmPayment)
+        val btnCancel = dialog.findViewById<Button>(R.id.btnCancelPayment)
+
+        FirebaseDatabase.getInstance().getReference("Users").child(ownerId).child("phone")
+            .addListenerForSingleValueEvent(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    tvOwnerBkash.text = snapshot.value?.toString() ?: "No number available"
+                }
+                override fun onCancelled(error: DatabaseError) {}
+            })
+
+        btnCancel.setOnClickListener { dialog.dismiss() }
+
+        btnConfirm.setOnClickListener {
+            val userBkash = etUserBkash.text.toString().trim()
+            val txnId = etTxnId.text.toString().trim()
+
+            if (userBkash.isEmpty() || txnId.isEmpty()) {
+                Toast.makeText(this, "Please fill all details", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            processManualPayment(notification, userBkash, txnId)
+            dialog.dismiss()
+        }
+
+        dialog.show()
+    }
+
+    private fun processManualPayment(notification: Notification, userBkash: String, txnId: String) {
         val userId = auth.currentUser?.uid ?: return
         val ownerId = notification.fromUserId ?: return
-        val bookingId = notification.bookingId ?: ""
-        val propertyId = notification.propertyId ?: ""
         
         val priceStr = notification.propertyPrice?.replace("[^0-9]".toRegex(), "") ?: "0"
         val amount = priceStr.toLongOrNull() ?: 0L
@@ -109,7 +148,8 @@ class NotificationActivity : AppCompatActivity() {
             return
         }
 
-        val revenueRef = FirebaseDatabase.getInstance().getReference("Revenue").child(ownerId)
+        val rootRef = FirebaseDatabase.getInstance().reference
+        val revenueRef = rootRef.child("Revenue").child(ownerId)
         revenueRef.runTransaction(object : Transaction.Handler {
             override fun doTransaction(currentData: MutableData): Transaction.Result {
                 val currentRevenue = currentData.getValue(Long::class.java) ?: 0L
@@ -119,61 +159,75 @@ class NotificationActivity : AppCompatActivity() {
 
             override fun onComplete(error: DatabaseError?, committed: Boolean, snapshot: DataSnapshot?) {
                 if (committed) {
-                    val rootRef = FirebaseDatabase.getInstance().reference
-                    val updates = hashMapOf<String, Any?>()
-                    
-                    // Update user's notification
-                    updates["/Notifications/$userId/${notification.id}/type"] = "BOOKING_PAID"
-                    
-                    // Update booking status in all places
-                    if (bookingId.isNotEmpty()) updates["/OwnerRequests/$ownerId/$bookingId/status"] = "PAID"
-                    if (propertyId.isNotEmpty()) {
-                        updates["/Bookings/$userId/$propertyId/status"] = "PAID"
-                        // CRITICAL: Mark property as Occupied
-                        updates["/Properties/$propertyId/available"] = false
-                    }
-                    
-                    rootRef.updateChildren(updates).addOnSuccessListener {
-                        Toast.makeText(this@NotificationActivity, "Payment Successful! Property Rented.", Toast.LENGTH_LONG).show()
-                        notifyOwnerOfPayment(ownerId, notification)
-                    }
+                    savePaymentRecord(notification, userBkash, txnId, amount)
                 } else {
-                    Log.e("NotificationActivity", "Payment failed: ${error?.message}")
-                    Toast.makeText(this@NotificationActivity, "Payment Failed", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@NotificationActivity, "Revenue Update Failed", Toast.LENGTH_SHORT).show()
                 }
             }
         })
     }
 
-    private fun notifyOwnerOfPayment(ownerId: String, oldNotify: Notification) {
+    private fun savePaymentRecord(notification: Notification, userBkash: String, txnId: String, amount: Long) {
         val userId = auth.currentUser?.uid ?: return
+        val ownerId = notification.fromUserId ?: return
+        val rootRef = FirebaseDatabase.getInstance().reference
         
-        // Fetch current user name for the notification
-        FirebaseDatabase.getInstance().getReference("Users").child(userId).child("name")
-            .addListenerForSingleValueEvent(object : ValueEventListener {
-                override fun onDataChange(snapshot: DataSnapshot) {
-                    val userName = snapshot.value?.toString() ?: "User"
-                    val userProfilePic = "" // Could fetch if needed
-                    
-                    val notifyRef = FirebaseDatabase.getInstance().getReference("Notifications").child(ownerId)
-                    val notifyId = notifyRef.push().key ?: return
-                    
-                    val notification = Notification(
-                        id = notifyId,
-                        fromUserId = userId,
-                        fromUserName = userName,
-                        propertyId = oldNotify.propertyId,
-                        propertyTitle = oldNotify.propertyTitle,
-                        propertyImage = oldNotify.propertyImage,
-                        propertyPrice = oldNotify.propertyPrice,
-                        bookingId = oldNotify.bookingId,
-                        type = "BOOKING_PAID", // Owner sees "User has paid"
-                        timestamp = System.currentTimeMillis()
-                    )
-                    notifyRef.child(notifyId).setValue(notification)
+        val paymentId = rootRef.child("Payments").push().key ?: return
+
+        rootRef.child("Users").child(userId).addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val userName = snapshot.child("name").value?.toString() ?: "User"
+                val userPic = snapshot.child("profileImageUrl").value?.toString() ?: ""
+
+                val paymentData = Payment(
+                    paymentId = paymentId,
+                    propertyId = notification.propertyId,
+                    propertyTitle = notification.propertyTitle,
+                    propertyImage = notification.propertyImage,
+                    propertyLocation = notification.propertyLocation, // Added location
+                    userId = userId,
+                    userName = userName,
+                    userProfilePic = userPic,
+                    ownerId = ownerId,
+                    amount = amount.toString(),
+                    bKashNumber = userBkash,
+                    transactionId = txnId,
+                    timestamp = System.currentTimeMillis()
+                )
+
+                val updates = hashMapOf<String, Any?>()
+                updates["/Payments/$paymentId"] = paymentData
+                updates["/Notifications/$userId/${notification.id}/type"] = "BOOKING_PAID"
+
+                rootRef.updateChildren(updates).addOnSuccessListener {
+                    Toast.makeText(this@NotificationActivity, "Payment Successful! Details recorded.", Toast.LENGTH_LONG).show()
+                    notifyOwnerOfPayment(ownerId, notification, userName, userPic)
                 }
-                override fun onCancelled(error: DatabaseError) {}
-            })
+            }
+            override fun onCancelled(error: DatabaseError) {}
+        })
+    }
+
+    private fun notifyOwnerOfPayment(ownerId: String, oldNotify: Notification, userName: String, userPic: String) {
+        val userId = auth.currentUser?.uid ?: return
+        val notifyRef = FirebaseDatabase.getInstance().getReference("Notifications").child(ownerId)
+        val notifyId = notifyRef.push().key ?: return
+        
+        val notification = Notification(
+            id = notifyId,
+            fromUserId = userId,
+            fromUserName = userName,
+            fromUserProfilePic = userPic,
+            propertyId = oldNotify.propertyId,
+            propertyTitle = oldNotify.propertyTitle,
+            propertyImage = oldNotify.propertyImage,
+            propertyPrice = oldNotify.propertyPrice,
+            propertyLocation = oldNotify.propertyLocation, // Pass location forward
+            bookingId = oldNotify.bookingId,
+            type = "BOOKING_PAID", 
+            timestamp = System.currentTimeMillis()
+        )
+        notifyRef.child(notifyId).setValue(notification)
     }
 
     override fun onDestroy() {
@@ -245,8 +299,6 @@ class NotificationAdapter(
                 showPropertyDetails(holder, notification)
             }
             "BOOKING_PAID" -> {
-                // If the current user is the payer, show "Payment confirmed"
-                // If the current user is the owner, show "Received payment from..."
                 val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
                 if (notification.fromUserId == currentUserId) {
                     setStyledText(holder.tvText, "Your payment", " for ${notification.propertyTitle} is confirmed!")

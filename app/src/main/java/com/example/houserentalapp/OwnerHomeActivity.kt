@@ -8,6 +8,7 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.cardview.widget.CardView
@@ -39,6 +40,8 @@ class OwnerHomeActivity : AppCompatActivity() {
     private var requestQuery: Query? = null
     private var revenueRef: DatabaseReference? = null
 
+    private var backPressedTime: Long = 0
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_owner_home)
@@ -55,10 +58,11 @@ class OwnerHomeActivity : AppCompatActivity() {
 
         val btnLogout = findViewById<TextView>(R.id.btnBackOwnerHome)
         val navProfile = findViewById<LinearLayout>(R.id.nav_owner_profile)
-        val navReport = findViewById<LinearLayout>(R.id.nav_owner_report_user) // Changed from calendar
+        val navReport = findViewById<LinearLayout>(R.id.nav_owner_report_user)
         val cvAddProperty = findViewById<CardView>(R.id.cvAddProperty)
         val cvMyListings = findViewById<CardView>(R.id.cvMyListings)
         val cvManageRequests = findViewById<CardView>(R.id.cvManageRequests)
+        val cvRentTracker = findViewById<CardView>(R.id.cvRentTracker)
         val btnNotifications = findViewById<ImageButton>(R.id.ivOwnerNotifications)
 
         val userId = auth.currentUser?.uid
@@ -76,9 +80,15 @@ class OwnerHomeActivity : AppCompatActivity() {
             startActivity(Intent(this, NotificationActivity::class.java))
         }
 
+        // Fixed: Removed automatic logout on back press. Now it requires double tap to exit or logout button.
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                logoutUser()
+                if (backPressedTime + 2000 > System.currentTimeMillis()) {
+                    finishAffinity()
+                } else {
+                    Toast.makeText(this@OwnerHomeActivity, "Press back again to exit", Toast.LENGTH_SHORT).show()
+                }
+                backPressedTime = System.currentTimeMillis()
             }
         })
 
@@ -87,7 +97,6 @@ class OwnerHomeActivity : AppCompatActivity() {
         }
 
         navReport.setOnClickListener {
-            // Reusing AdminUserListActivity for reporting users
             val intent = Intent(this, AdminUserListActivity::class.java)
             intent.putExtra("ROLE", "User")
             intent.putExtra("IS_OWNER_REPORTING", true)
@@ -104,6 +113,12 @@ class OwnerHomeActivity : AppCompatActivity() {
 
         cvManageRequests.setOnClickListener {
             startActivity(Intent(this, OwnerBookingRequestsActivity::class.java))
+        }
+
+        cvRentTracker.setOnClickListener {
+            val intent = Intent(this, PaymentsListActivity::class.java)
+            intent.putExtra("IS_OWNER", true)
+            startActivity(intent)
         }
     }
 

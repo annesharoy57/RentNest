@@ -132,6 +132,7 @@ class OwnerBookingRequestsActivity : AppCompatActivity() {
             propertyTitle = booking.propertyTitle,
             propertyImage = booking.propertyImage,
             propertyPrice = booking.propertyPrice,
+            propertyLocation = booking.propertyLocation, // Added property location here
             bookingId = booking.bookingId,
             type = "BOOKING_$status",
             timestamp = System.currentTimeMillis()
@@ -159,8 +160,10 @@ class OwnerBookingAdapter(
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RequestViewHolder {
-        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_owner_booking_request, parent, false)
-        return RequestViewHolder(view)
+        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_payment, parent, false) // Wait, this should be item_owner_booking_request
+        // Reverting to correct layout for booking requests
+        val realView = LayoutInflater.from(parent.context).inflate(R.layout.item_owner_booking_request, parent, false)
+        return RequestViewHolder(realView)
     }
 
     override fun onBindViewHolder(holder: RequestViewHolder, position: Int) {
