@@ -184,7 +184,7 @@ class NotificationActivity : AppCompatActivity() {
                     propertyId = notification.propertyId,
                     propertyTitle = notification.propertyTitle,
                     propertyImage = notification.propertyImage,
-                    propertyLocation = notification.propertyLocation, // Added location
+                    propertyLocation = notification.propertyLocation,
                     userId = userId,
                     userName = userName,
                     userProfilePic = userPic,
@@ -197,7 +197,8 @@ class NotificationActivity : AppCompatActivity() {
 
                 val updates = hashMapOf<String, Any?>()
                 updates["/Payments/$paymentId"] = paymentData
-                updates["/Notifications/$userId/${notification.id}/type"] = "BOOKING_PAID"
+                // Fixed: Use a different type for the user side to show correct "payment done!" text
+                updates["/Notifications/$userId/${notification.id}/type"] = "PAYMENT_CONFIRMED"
 
                 rootRef.updateChildren(updates).addOnSuccessListener {
                     Toast.makeText(this@NotificationActivity, "Payment Successful! Details recorded.", Toast.LENGTH_LONG).show()
@@ -222,7 +223,7 @@ class NotificationActivity : AppCompatActivity() {
             propertyTitle = oldNotify.propertyTitle,
             propertyImage = oldNotify.propertyImage,
             propertyPrice = oldNotify.propertyPrice,
-            propertyLocation = oldNotify.propertyLocation, // Pass location forward
+            propertyLocation = oldNotify.propertyLocation,
             bookingId = oldNotify.bookingId,
             type = "BOOKING_PAID", 
             timestamp = System.currentTimeMillis()
@@ -298,14 +299,18 @@ class NotificationAdapter(
                 holder.btnPayNow.setOnClickListener { onPayClick(notification) }
                 showPropertyDetails(holder, notification)
             }
+            "PAYMENT_CONFIRMED" -> {
+                // Fixed: Specifically for the User's notification update
+                setStyledText(holder.tvText, userName, " payment done!")
+                holder.btnPayNow.visibility = View.VISIBLE
+                holder.btnPayNow.text = "Paid Successfully"
+                holder.btnPayNow.isEnabled = false
+                holder.btnPayNow.alpha = 0.7f
+                showPropertyDetails(holder, notification)
+            }
             "BOOKING_PAID" -> {
-                val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
-                if (notification.fromUserId == currentUserId) {
-                    setStyledText(holder.tvText, "Your payment", " for ${notification.propertyTitle} is confirmed!")
-                } else {
-                    setStyledText(holder.tvText, userName, " has paid for ${notification.propertyTitle}")
-                }
-
+                // For the Owner (Sender was the User)
+                setStyledText(holder.tvText, userName, " has paid for ${notification.propertyTitle}")
                 holder.btnPayNow.visibility = View.VISIBLE
                 holder.btnPayNow.text = "Paid Successfully"
                 holder.btnPayNow.isEnabled = false

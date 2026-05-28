@@ -274,7 +274,7 @@
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="151dp"
+            android:layout_height="match_parent"
             android:gravity="center_vertical"
             android:orientation="horizontal"
             android:padding="16dp">
@@ -305,7 +305,7 @@
             <Button
                 android:id="@+id/btnBookNow"
                 android:layout_width="160dp"
-                android:layout_height="76dp"
+                android:layout_height="wrap_content"
                 android:backgroundTint="@color/primary_blue"
                 android:text="Book Now"
                 android:textAllCaps="false"
