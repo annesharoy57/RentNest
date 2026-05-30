@@ -3,6 +3,7 @@ package com.example.houserentalapp
 data class Review(
     var reviewId: String? = null,
     var propertyId: String? = null,
+    var ownerId: String? = null,
     var propertyTitle: String? = null,
     var propertyImage: String? = null,
     var propertyLocation: String? = null,

@@ -194,7 +194,7 @@ class PropertyDetailsActivity : AppCompatActivity() {
                         }
                         "DECLINED" -> {
                             btnBookNow.isEnabled = true
-                            btnBookNow.text = "Re-book Property"
+                            btnBookNow.text = "Re-book House"
                             btnBookNow.alpha = 1.0f
                         }
                     }

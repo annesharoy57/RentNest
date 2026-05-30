@@ -230,6 +230,7 @@ class AdminUserAdapter(
         val ivUser: ImageView = view.findViewById(R.id.ivUserImage)
         val tvName: TextView = view.findViewById(R.id.tvUserName)
         val tvEmail: TextView = view.findViewById(R.id.tvUserEmail)
+        val tvUserId: TextView = view.findViewById(R.id.tvUserId)
         val tvRoleDisplay: TextView = view.findViewById(R.id.tvUserRoleDisplay)
         val tvPhone: TextView = view.findViewById(R.id.tvUserPhone)
         val tvAddress: TextView = view.findViewById(R.id.tvUserAddress)
@@ -248,6 +249,7 @@ class AdminUserAdapter(
         val user = users[position]
         holder.tvName.text = user.name ?: "No Name"
         holder.tvEmail.text = user.email ?: "No Email"
+        holder.tvUserId.text = "ID: ${user.uid ?: "N/A"}"
         holder.tvRoleDisplay.text = user.role?.uppercase() ?: "USER"
         
         if (isReporting) {

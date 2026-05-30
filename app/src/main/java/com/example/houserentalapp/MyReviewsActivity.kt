@@ -28,7 +28,7 @@ class MyReviewsActivity : AppCompatActivity() {
     private lateinit var adapter: MyReviewAdapter
 
     private val auth = FirebaseAuth.getInstance()
-    private val database = FirebaseDatabase.getInstance().getReference("UserReviews")
+    private val rootDatabase = FirebaseDatabase.getInstance().reference
     
     private var reviewsRef: DatabaseReference? = null
     private var reviewsListener: ValueEventListener? = null
@@ -58,31 +58,24 @@ class MyReviewsActivity : AppCompatActivity() {
         val userId = auth.currentUser?.uid ?: return
         pbReviews.visibility = View.VISIBLE
 
-        reviewsRef = database.child(userId)
+        reviewsRef = rootDatabase.child("UserReviews").child(userId)
         reviewsListener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 reviewList.clear()
                 for (data in snapshot.children) {
                     val review = data.getValue(Review::class.java)
                     if (review != null) {
+                        review.reviewId = data.key
                         reviewList.add(review)
                     }
                 }
                 pbReviews.visibility = View.GONE
-                if (reviewList.isEmpty()) {
-                    layoutNoReviews.visibility = View.VISIBLE
-                } else {
-                    layoutNoReviews.visibility = View.GONE
-                }
+                layoutNoReviews.visibility = if (reviewList.isEmpty()) View.VISIBLE else View.GONE
                 adapter.notifyDataSetChanged()
             }
 
             override fun onCancelled(error: DatabaseError) {
                 pbReviews.visibility = View.GONE
-                // Check if user is still logged in to avoid "Permission Denied" Toast on logout
-                if (auth.currentUser != null) {
-                    Toast.makeText(this@MyReviewsActivity, "Error: ${error.message}", Toast.LENGTH_SHORT).show()
-                }
             }
         }
         reviewsRef?.addValueEventListener(reviewsListener!!)
@@ -102,35 +95,26 @@ class MyReviewsActivity : AppCompatActivity() {
 
         val ratingBar = dialog.findViewById<RatingBar>(R.id.ratingBar)
         val etReview = dialog.findViewById<EditText>(R.id.etReview)
-        val tvRatingLabel = dialog.findViewById<TextView>(R.id.tvRatingLabel)
         val btnUpdate = dialog.findViewById<Button>(R.id.btnPostReview)
         val btnCancel = dialog.findViewById<Button>(R.id.btnCancelReview)
-        val tvHeader = dialog.findViewById<TextView>(R.id.tvReviewDialogTitle)
 
-        tvHeader?.text = "Edit Your Review"
         btnUpdate.text = "Update"
         ratingBar.rating = review.rating
         etReview.setText(review.review)
-        tvRatingLabel.text = "Rating (${review.rating.toInt()}/5)"
-
-        ratingBar.setOnRatingBarChangeListener { _, rating, _ ->
-            tvRatingLabel.text = "Rating (${rating.toInt()}/5)"
-        }
 
         btnCancel.setOnClickListener { dialog.dismiss() }
 
         btnUpdate.setOnClickListener {
             val newRating = ratingBar.rating
             val newReviewText = etReview.text.toString().trim()
+            val userId = auth.currentUser?.uid ?: return@setOnClickListener
+            val rId = review.reviewId ?: ""
+            val pId = review.propertyId ?: ""
 
-            if (newRating == 0f) {
-                Toast.makeText(this, "Please select stars", Toast.LENGTH_SHORT).show()
+            if (pId.isEmpty() || rId.isEmpty()) {
+                Toast.makeText(this, "Error: Missing review ID", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-
-            val userId = auth.currentUser?.uid ?: return@setOnClickListener
-            val rId = review.reviewId ?: return@setOnClickListener
-            val pId = review.propertyId ?: return@setOnClickListener
 
             val updates = hashMapOf<String, Any?>()
             updates["/Reviews/$pId/$rId/rating"] = newRating
@@ -138,11 +122,13 @@ class MyReviewsActivity : AppCompatActivity() {
             updates["/UserReviews/$userId/$rId/rating"] = newRating
             updates["/UserReviews/$userId/$rId/review"] = newReviewText
 
-            FirebaseDatabase.getInstance().reference.updateChildren(updates).addOnSuccessListener {
-                Toast.makeText(this, "Review updated!", Toast.LENGTH_SHORT).show()
+            rootDatabase.updateChildren(updates).addOnSuccessListener {
+                // FORCE SYNC: Find owner and update their notification
+                syncWithPropertyOwner(pId, userId, rId, newReviewText, newRating, false)
+                Toast.makeText(this, "Review updated everywhere!", Toast.LENGTH_SHORT).show()
                 dialog.dismiss()
             }.addOnFailureListener {
-                Toast.makeText(this, "Update failed: ${it.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "Update failed: ${it.message}", Toast.LENGTH_SHORT).show()
             }
         }
         dialog.show()
@@ -151,28 +137,62 @@ class MyReviewsActivity : AppCompatActivity() {
     private fun showDeleteConfirmation(review: Review) {
         AlertDialog.Builder(this)
             .setTitle("Delete Review")
-            .setMessage("Are you sure you want to delete this review?")
-            .setPositiveButton("Delete") { _, _ ->
-                deleteReview(review)
-            }
+            .setMessage("Delete this review from the property and owner notifications?")
+            .setPositiveButton("Delete") { _, _ -> deleteReview(review) }
             .setNegativeButton("Cancel", null)
             .show()
     }
 
     private fun deleteReview(review: Review) {
         val userId = auth.currentUser?.uid ?: return
-        val rId = review.reviewId ?: return
-        val pId = review.propertyId ?: return
+        val rId = review.reviewId ?: ""
+        val pId = review.propertyId ?: ""
+
+        if (pId.isEmpty() || rId.isEmpty()) return
 
         val updates = hashMapOf<String, Any?>()
         updates["/Reviews/$pId/$rId"] = null
         updates["/UserReviews/$userId/$rId"] = null
 
-        FirebaseDatabase.getInstance().reference.updateChildren(updates).addOnSuccessListener {
-            Toast.makeText(this, "Review deleted", Toast.LENGTH_SHORT).show()
-        }.addOnFailureListener {
-            Toast.makeText(this, "Delete failed: ${it.message}", Toast.LENGTH_SHORT).show()
+        rootDatabase.updateChildren(updates).addOnSuccessListener {
+            // FORCE SYNC: Find owner and delete the notification
+            syncWithPropertyOwner(pId, userId, rId, null, 0f, true)
+            Toast.makeText(this, "Review deleted everywhere", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun syncWithPropertyOwner(pId: String, userId: String, rId: String, text: String?, rating: Float, isDelete: Boolean) {
+        // Find owner from Property node to ensure we have the correct ID
+        rootDatabase.child("Properties").child(pId).child("ownerId")
+            .addListenerForSingleValueEvent(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    val ownerId = snapshot.value?.toString() ?: return
+                    
+                    val notifyRef = rootDatabase.child("Notifications").child(ownerId)
+                    notifyRef.addListenerForSingleValueEvent(object : ValueEventListener {
+                        override fun onDataChange(notifySnapshot: DataSnapshot) {
+                            for (data in notifySnapshot.children) {
+                                val type = data.child("type").value?.toString()
+                                val targetPid = data.child("propertyId").value?.toString()
+                                val fromUid = data.child("fromUserId").value?.toString()
+                                
+                                if (type == "REVIEW" && targetPid == pId && fromUid == userId) {
+                                    if (isDelete) {
+                                        data.ref.removeValue()
+                                    } else {
+                                        val notifyUpdates = hashMapOf<String, Any?>()
+                                        notifyUpdates["reviewText"] = text
+                                        notifyUpdates["rating"] = rating
+                                        data.ref.updateChildren(notifyUpdates)
+                                    }
+                                }
+                            }
+                        }
+                        override fun onCancelled(error: DatabaseError) {}
+                    })
+                }
+                override fun onCancelled(error: DatabaseError) {}
+            })
     }
 }
 
@@ -200,10 +220,8 @@ class MyReviewAdapter(
 
     override fun onBindViewHolder(holder: ReviewViewHolder, position: Int) {
         val review = reviewList[position]
-        val context = holder.itemView.context
-
         holder.tvTitle.text = review.propertyTitle ?: "House Rental"
-        holder.tvLocation.text = review.propertyLocation ?: "Location details"
+        holder.tvLocation.text = review.propertyLocation ?: "Location"
         holder.ratingBar.rating = review.rating
         holder.tvText.text = review.review
         
@@ -211,18 +229,12 @@ class MyReviewAdapter(
         if (ts is Long) {
             val sdf = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
             holder.tvDate.text = sdf.format(Date(ts))
-        } else {
-            holder.tvDate.text = "Just now"
         }
 
-        if (!review.propertyImage.isNullOrEmpty()) {
-            Glide.with(context)
-                .load(review.propertyImage)
-                .placeholder(R.drawable.ic_home)
-                .into(holder.ivProperty)
-        } else {
-            holder.ivProperty.setImageResource(R.drawable.ic_home)
-        }
+        Glide.with(holder.itemView.context)
+            .load(review.propertyImage)
+            .placeholder(R.drawable.ic_home)
+            .into(holder.ivProperty)
 
         holder.btnEdit.setOnClickListener { onEditClick(review) }
         holder.btnDelete.setOnClickListener { onDeleteClick(review) }

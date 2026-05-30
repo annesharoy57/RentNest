@@ -304,6 +304,7 @@ class ExploreAdapter(
             val reviewData = hashMapOf(
                 "reviewId" to reviewId,
                 "propertyId" to property.propertyId,
+                "ownerId" to property.ownerId,
                 "propertyTitle" to property.title,
                 "propertyImage" to (property.imageUrls?.firstOrNull() ?: ""),
                 "propertyLocation" to (property.location ?: ""),
